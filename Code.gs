@@ -28,25 +28,40 @@ function findRow_(sh, id) {
   return 0;
 }
 
-// 写真はドライブの「たべたもの記録の写真」フォルダに、ファイル名の末尾を記録IDにして保存する
+// 写真はドライブの「たべたもの記録の写真」フォルダに、ファイル名の末尾を記録IDにして保存する。
+// DriveApp はドライブ全体の権限を求めるので、このスクリプトが作ったファイルだけを扱える
+// Drive API（拡張サービス、drive.file 権限）を使う。
 function photoFolder_() {
   const props = PropertiesService.getScriptProperties();
   const id = props.getProperty('PHOTO_FOLDER');
   if (id) {
     try {
-      const f = DriveApp.getFolderById(id);
-      if (!f.isTrashed()) return f;
+      if (!Drive.Files.get(id, { fields: 'trashed' }).trashed) return id;
     } catch (err) {}
   }
-  const f = DriveApp.createFolder('たべたもの記録の写真');
-  props.setProperty('PHOTO_FOLDER', f.getId());
-  return f;
+  const f = Drive.Files.create({ name: 'たべたもの記録の写真', mimeType: 'application/vnd.google-apps.folder' });
+  props.setProperty('PHOTO_FOLDER', f.id);
+  return f.id;
 }
 
+// 見つかればファイルID、なければ null
 function findPhoto_(id) {
   if (!/^[0-9a-z]+$/i.test(String(id))) return null;
-  const it = photoFolder_().searchFiles(`title contains '${id}' and trashed = false`);
-  return it.hasNext() ? it.next() : null;
+  const res = Drive.Files.list({
+    q: `'${photoFolder_()}' in parents and name contains '${id}' and trashed = false`,
+    fields: 'files(id)', pageSize: 1
+  });
+  return res.files && res.files.length ? res.files[0].id : null;
+}
+
+function trashPhoto_(fileId) {
+  Drive.Files.update({ trashed: true }, fileId);
+}
+
+function photoBytes_(fileId) {
+  return UrlFetchApp.fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+  }).getContent();
 }
 
 // 初回だけ、Apps Scriptの画面でこの関数を選んで「実行」し、ドライブへのアクセスを許可する
@@ -93,22 +108,23 @@ function doPost(e) {
     if (req.action === 'delete') {
       if (r) sh.deleteRow(r);
       const p = findPhoto_(req.id);
-      if (p) p.setTrashed(true);
+      if (p) trashPhoto_(p);
       return out_({ ok: true });
     }
 
     if (req.action === 'photo_put') {
       const old = findPhoto_(req.id);
       if (old && req.ifMissing) return out_({ ok: true, skipped: true });
-      if (old) old.setTrashed(true);
+      if (old) trashPhoto_(old);
       const name = String(req.name || '').replace(/[\\/:*?"<>|]/g, '').slice(0, 80) + ' ' + req.id + '.jpg';
-      photoFolder_().createFile(Utilities.newBlob(Utilities.base64Decode(req.data), 'image/jpeg', name));
+      Drive.Files.create({ name: name, parents: [photoFolder_()], mimeType: 'image/jpeg' },
+        Utilities.newBlob(Utilities.base64Decode(req.data), 'image/jpeg', name));
       return out_({ ok: true });
     }
 
     if (req.action === 'photo_get') {
       const p = findPhoto_(req.id);
-      return out_({ ok: true, data: p ? Utilities.base64Encode(p.getBlob().getBytes()) : null });
+      return out_({ ok: true, data: p ? Utilities.base64Encode(photoBytes_(p)) : null });
     }
 
     if (req.action === 'upsert') {

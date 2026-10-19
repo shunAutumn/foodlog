@@ -111,6 +111,9 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .grab{width:38px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 12px}
 .sheet h3{font-size:1.3rem; font-weight:800; margin:4px 4px 14px}
 .preview{width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:22px; display:block; background:var(--surface2)}
+.photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
+  border-radius:999px; padding:9px 18px; cursor:pointer}
+.photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
 .status{display:flex; gap:10px; align-items:center; margin:14px 4px 0; font-weight:700; font-size:.92rem}
 .status.err{color:var(--danger)}
 .spin{width:18px; height:18px; border-radius:50%; border:2.5px solid var(--accent-soft); border-top-color:var(--accent); animation:sp .8s linear infinite; flex:none}
@@ -214,6 +217,8 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="grab"></div>
     <h3 id="mealTitle" class="sr">食事の内容</h3>
     <img class="preview" id="mPhoto" alt="">
+    <button class="photobtn" id="mPhotoBtn" type="button">写真を追加</button>
+    <input type="file" id="file2" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
     <div class="status" id="mStatus"></div>
     <p class="memo" id="mMemo"></p>
 
@@ -812,7 +817,7 @@ function openMeal(m, isNew){
   buildHistory();
   m.items = (m.items || []).map(i => withBase({ ...blank(), ...i }));
   draft = m; draft._new = isNew;
-  $("mPhoto").hidden = !m.thumb; if (m.thumb) $("mPhoto").src = m.thumb;
+  showPhoto();
   $("mTime").value = localInput(m.eatenAt);
   $("mMemo").textContent = m.comment || "";
   setStatus($("mStatus"), "");
@@ -821,7 +826,24 @@ function openMeal(m, isNew){
   $("mSave").disabled = false;
   renderItems(); show($("mealSheet"));
 }
-$("mTime").addEventListener("change", () => { const t = new Date($("mTime").value).getTime(); if (!isNaN(t) && draft) draft.eatenAt = t; });
+function showPhoto(){
+  $("mPhoto").hidden = !draft.thumb; if (draft.thumb) $("mPhoto").src = draft.thumb;
+  $("mPhotoBtn").textContent = draft.thumb ? "写真を変える" : "写真を追加";
+}
+// あとから写真を付ける・差し替える（AIでの読み取りはしない。保存するとドライブの写真も差し替わる）
+$("mPhotoBtn").addEventListener("click", () => { $("file2").value = ""; $("file2").click(); });
+$("file2").addEventListener("change", async () => {
+  const f = $("file2").files && $("file2").files[0]; if (!f || !draft) return;
+  const mine = draft;
+  try {
+    const thumb = await shrink(f, 480, .72), big = await shrink(f, 1400, .85);
+    if (draft !== mine) return;
+    Object.assign(draft, { thumb, _photo:big, _photoChanged:true });
+    showPhoto();
+    if (!draft._new) setStatus($("mStatus"), "「保存する」を押すと写真が変わります。");
+  } catch { setStatus($("mStatus"), "写真を読み込めませんでした。別の写真で試してください。", "err"); }
+});
+$("mTime").addEventListener("change",() => { const t = new Date($("mTime").value).getTime(); if (!isNaN(t) && draft) draft.eatenAt = t; });
 $("mCancel").addEventListener("click", hide);
 
 $("shutter").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
@@ -835,7 +857,7 @@ $("file").addEventListener("change", async () => {
   const eatenAt = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
   let thumb = "", big = "";
   try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
-  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"", _photo:big || thumb }, true);
+  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"", _photo:big || thumb, _photoChanged:true }, true);
   if (!settings.key || !big){
     draft.items = [blank()]; renderItems();
     setStatus($("mStatus"), settings.key ? "写真を読み込めませんでした。手で入力してください。" : "APIキーが未設定なので、手で入力してください。", "err");
@@ -872,7 +894,7 @@ $("mSave").addEventListener("click", async () => {
     .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0),
       p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
-  const photo = draft._new && draft._photo;
+  const photo = draft._photoChanged && draft._photo;
   $("mSave").disabled = true;
   try {
     await DB.put(m);
