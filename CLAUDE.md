@@ -30,6 +30,13 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **シートの列**：A日付(yyyy/MM/dd) B時刻(H:mm) C食べたもの D合計kcal E内訳 F メモ G記録ID。
   E内訳は `ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］、みそ汁 40kcal（表示）` の形（gは0なら省く）。読み込み時は `parseDetail()` で品目に戻す。
   I1に日別合計のQUERY式があるので、A〜G列以外は書き換えない。
+- **写真の保存**：新しく撮った写真（長辺1400px）はIndexedDBの `photos` ストア（DBバージョン2）に置き、
+  localStorage `foodlog.photoq` の順に Apps Script の `photo_put` でGoogleドライブ「たべたもの記録の写真」へ送り、送れたら消す。
+  写真の送信は記録の送信（`foodlog.queue`）とは別で、失敗しても記録は止めない。ファイル名の末尾が記録ID。
+  `photo_get` で取り戻す（シートから読み込むとき）。`delete` で写真もごみ箱へ。`ifMissing` はドライブにないときだけ送る
+  （機能追加前の記録の小さい写真を一度だけ送るため。`foodlog.oldPhotosSent`）。
+  Apps Scriptの権限は `appsscript.json` の `oauthScopes`（spreadsheets.currentonly / drive.file）。
+  権限を増やしたら、利用者がApps Scriptの画面で関数を実行して許可してから `clasp redeploy` する（先にデプロイすると許可されるまで全部止まる）。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。

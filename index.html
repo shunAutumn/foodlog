@@ -254,7 +254,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
       <div class="row"><label for="sUrl">連携URL</label><input id="sUrl" type="url" placeholder="https://script.google.com/..." spellcheck="false" autocomplete="off"></div>
       <div class="row"><label for="sToken">合言葉</label><input id="sToken" type="password" autocomplete="off" placeholder="Apps Scriptと同じもの"></div>
     </div>
-    <p class="help">設定のしかたは同じフォルダの README.md を見てください。</p>
+    <p class="help">写真はGoogleドライブの「たべたもの記録の写真」フォルダに保存されます。設定のしかたは同じフォルダの README.md を見てください。</p>
 
     <button class="btn primary" id="sSave" type="button">保存する</button>
     <button class="btn plain" id="sTest" type="button">スプレッドシートとの接続を確認</button>
@@ -297,17 +297,26 @@ const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(set
 const DB = (() => {
   let p;
   const open = () => p || (p = new Promise((res, rej) => {
-    const r = indexedDB.open("foodlog", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("meals", { keyPath:"id" });
-    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    const r = indexedDB.open("foodlog", 2);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains("meals")) db.createObjectStore("meals", { keyPath:"id" });
+      // ドライブへ送る前の写真（送ったら消す）
+      if (!db.objectStoreNames.contains("photos")) db.createObjectStore("photos", { keyPath:"id" });
+    };
+    r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
+    r.onerror = () => rej(r.error);
   }));
-  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => {
-    const t = db.transaction("meals", mode); const s = t.objectStore("meals"); const out = fn(s);
+  const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction(store, mode); const s = t.objectStore(store); const out = fn(s);
     t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
   return {
-    all: () => tx("readonly", s => s.getAll()),
-    put: m => tx("readwrite", s => s.put(m)),
-    del: id => tx("readwrite", s => s.delete(id))
+    all: () => tx("meals", "readonly", s => s.getAll()),
+    put: m => tx("meals", "readwrite", s => s.put(m)),
+    del: id => tx("meals", "readwrite", s => s.delete(id)),
+    photo: id => tx("photos", "readonly", s => s.get(id)),
+    putPhoto: (id, data) => tx("photos", "readwrite", s => s.put({ id, data })),
+    delPhoto: id => tx("photos", "readwrite", s => s.delete(id))
   };
 })();
 
@@ -487,6 +496,39 @@ async function flush(){
       ? "合言葉がApps Scriptと一致しません。設定を確認してください。"
       : `スプレッドシートに未反映の記録が${readQ().length}件あります。つながったら自動で送ります。`;
   } finally { flushing = false; render(); }
+  if (!readQ().length) flushPhotos();
+}
+
+/* ---------- 写真をGoogleドライブへ（Apps Script経由）。失敗しても記録の送信は止めない ---------- */
+const PKEY = "foodlog.photoq";
+const readPQ = () => { try { return JSON.parse(localStorage.getItem(PKEY) || "[]"); } catch { return []; } };
+const writePQ = q => { try { localStorage.setItem(PKEY, JSON.stringify(q)); } catch {} };
+function photoName(m){
+  const d = new Date(m.eatenAt);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())} ${(m.items || []).map(i => i.name).filter(Boolean).join("、")}`;
+}
+// ifMissing：ドライブにまだないときだけ送る（以前の記録の小さい写真で、大きい写真を上書きしないため）
+async function enqueuePhoto(m, dataUrl, ifMissing){
+  await DB.putPhoto(m.id, dataUrl);
+  writePQ(readPQ().filter(o => o.id !== m.id).concat({ id:m.id, name:photoName(m), ifMissing:!!ifMissing }));
+}
+function dropPhoto(id){ writePQ(readPQ().filter(o => o.id !== id)); DB.delPhoto(id).catch(() => {}); }
+let pflushing = false;
+async function flushPhotos(){
+  if (pflushing || !settings.url || !readPQ().length) return;
+  pflushing = true;
+  try {
+    for (const op of readPQ()){
+      const rec = await DB.photo(op.id).catch(() => null);
+      if (rec && rec.data){
+        await callSheet({ action:"photo_put", id:op.id, name:op.name, ifMissing:op.ifMissing, data:rec.data.split(",")[1] });
+        await DB.delPhoto(op.id).catch(() => {});
+      }
+      writePQ(readPQ().filter(o => o.id !== op.id));
+    }
+  } catch {
+    $("syncline").textContent = `Googleドライブに保存できていない写真が${readPQ().length}枚あります。つながったら自動で送ります。`;
+  } finally { pflushing = false; }
 }
 addEventListener("online", flush);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) flush(); });
@@ -793,7 +835,7 @@ $("file").addEventListener("change", async () => {
   const eatenAt = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
   let thumb = "", big = "";
   try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
-  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"" }, true);
+  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"", _photo:big || thumb }, true);
   if (!settings.key || !big){
     draft.items = [blank()]; renderItems();
     setStatus($("mStatus"), settings.key ? "写真を読み込めませんでした。手で入力してください。" : "APIキーが未設定なので、手で入力してください。", "err");
@@ -830,11 +872,13 @@ $("mSave").addEventListener("click", async () => {
     .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0),
       p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
+  const photo = draft._new && draft._photo;
   $("mSave").disabled = true;
   try {
     await DB.put(m);
     meals = meals.filter(x => x.id !== m.id).concat(m);
     hide(); render();
+    if (photo) await enqueuePhoto(m, photo).catch(() => {});
     enqueue({ action:"upsert", id:m.id, row:sheetRow(m) });
   } catch {
     setStatus($("mStatus"), "保存できませんでした。もう一度押してください。", "err");
@@ -847,6 +891,7 @@ $("mDelete").addEventListener("click", async () => {
   await DB.del(id).catch(() => {});
   meals = meals.filter(x => x.id !== id);
   hide(); render();
+  dropPhoto(id); // ドライブの写真は Apps Script の delete で一緒にごみ箱へ
   enqueue({ action:"delete", id });
 });
 
@@ -864,12 +909,17 @@ function grab(){
   settings.url = $("sUrl").value.trim(); settings.token = $("sToken").value.trim();
   saveSettings();
 }
-$("sSave").addEventListener("click", () => { grab(); setStatus($("sStatus"), "保存しました。"); render(); flush(); });
+$("sSave").addEventListener("click", () => { grab(); setStatus($("sStatus"), "保存しました。"); render(); sendOldPhotos().then(flush); });
 $("sTest").addEventListener("click", async () => {
   grab();
   if (!settings.url) return setStatus($("sStatus"), "連携URLを入れてください。", "err");
   setStatus($("sStatus"), "確認しています", "busy");
-  try { const r = await callSheet({ action:"ping" }); setStatus($("sStatus"), `つながりました（${r.sheet || "シート"}）。`); flush(); }
+  try {
+    const r = await callSheet({ action:"ping" });
+    if (r.drive === false) setStatus($("sStatus"), `シートにはつながりました（${r.sheet || "シート"}）。写真をGoogleドライブに保存するには、Apps Scriptで許可が必要です。`, "err");
+    else setStatus($("sStatus"), `つながりました（${r.sheet || "シート"}${r.drive ? "・写真はGoogleドライブに保存" : ""}）。`);
+    flush();
+  }
   catch (e){ setStatus($("sStatus"), e.message === "unauthorized" ? "合言葉が一致しません。" : "つながりませんでした。URLとデプロイ設定を確認してください。", "err"); }
 });
 // E列「内訳」（例：ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
@@ -904,7 +954,23 @@ $("sImport").addEventListener("click", async () => {
       await DB.put(m); meals.push(m); added++;
     }
     render();
-    setStatus($("sStatus"), added ? `${added}件の記録を読み込みました（写真はありません）。` : "新しく読み込む記録はありませんでした。");
+    // 写真がない記録は、Googleドライブから写真を取ってくる
+    const sheetIds = new Set((r.rows || []).map(row => String(row[6])));
+    const need = meals.filter(m => !m.thumb && sheetIds.has(m.id));
+    let got = 0, failed = false;
+    for (const [n, m] of need.entries()){
+      setStatus($("sStatus"), `写真を読み込んでいます（${n + 1}/${need.length}）`, "busy");
+      try {
+        const p = await callSheet({ action:"photo_get", id:m.id });
+        if (!p.data) continue;
+        const bin = Uint8Array.from(atob(p.data), c => c.charCodeAt(0));
+        m.thumb = await shrink(new Blob([bin], { type:"image/jpeg" }), 480, .72);
+        await DB.put(m); got++;
+      } catch { failed = true; break; }
+    }
+    render();
+    const parts = [added ? `${added}件の記録を読み込みました` : "新しく読み込む記録はありませんでした", got ? `写真${got}枚を戻しました` : ""].filter(Boolean);
+    setStatus($("sStatus"), parts.join("。") + "。" + (failed ? "写真の一部は読み込めませんでした。" : ""), failed ? "err" : "");
   } catch (e){ setStatus($("sStatus"), "読み込めませんでした。URLと合言葉を確認してください。", "err"); }
 });
 
@@ -958,7 +1024,14 @@ async function importMove(text){
 }
 
 /* ---------- boot ---------- */
-load().then(flush);
+// この機能より前の記録は小さい写真しか残っていないので、それを一度だけドライブへ送る
+async function sendOldPhotos(){
+  const FLAG = "foodlog.oldPhotosSent";
+  try { if (!settings.url || localStorage.getItem(FLAG)) return; } catch { return; }
+  for (const m of meals) if (m.thumb && !readPQ().some(o => o.id === m.id)) await enqueuePhoto(m, m.thumb, true).catch(() => {});
+  try { localStorage.setItem(FLAG, "1"); } catch {}
+}
+load().then(sendOldPhotos).then(flush);
 setInterval(() => { if (!openSheetEl) render(); }, 5 * 60e3);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
