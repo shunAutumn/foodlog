@@ -37,8 +37,8 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   （機能追加前の記録の小さい写真を一度だけ送るため。`foodlog.oldPhotosSent`）。
   Apps Scriptの権限は `appsscript.json` の `oauthScopes`（spreadsheets.currentonly / drive.file / script.external_request）。
   DriveApp は drive.file では使えない（ドライブ全体の権限を要求する）ので、拡張サービス Drive（v3）を使う。写真の取得は UrlFetchApp で alt=media。
-- **あとから写真**：編集画面の「写真を追加／写真を変える」（`#file2`）。AIでは読み取らず、保存時に `_photoChanged` なら `photo_put` で差し替える。
   権限を増やしたら、利用者がApps Scriptの画面で関数を実行して許可してから `clasp redeploy` する（先にデプロイすると許可されるまで全部止まる）。
+- **あとから写真**：編集画面の「写真を追加／写真を変える」（`#file2`）。AIでは読み取らず、保存時に `_photoChanged` なら `photo_put` で差し替える。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。
