@@ -154,6 +154,7 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .btn[disabled]{opacity:.5}
 .help{font-size:.8rem; color:var(--muted); margin:8px 8px 0; line-height:1.6}
 .help a{color:var(--accent)}
+.row textarea{flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:1rem; color:var(--ink); outline:none; resize:none}
 select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1; text-align:right; direction:rtl}
 @media (prefers-reduced-motion: reduce){.sheet,.scrim{transition:none}.spin{animation:none}}
 </style>
@@ -250,6 +251,17 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <button class="btn plain" id="sTest" type="button">スプレッドシートとの接続を確認</button>
     <button class="btn plain" id="sImport" type="button">スプレッドシートから記録を読み込む</button>
     <div class="status" id="sStatus"></div>
+
+    <div class="cap">引っ越し（Safari → ホーム画面、機種変更）</div>
+    <button class="btn plain" id="mvCopy" type="button" style="margin-top:0">引っ越し用にコピー</button>
+    <button class="btn plain" id="mvPaste" type="button">貼り付けて取り込む</button>
+    <div class="group" id="mvBox" hidden style="margin-top:12px">
+      <div class="row"><textarea id="mvText" rows="3" placeholder="ここを長押しして「ペースト」" aria-label="引っ越しデータ"></textarea></div>
+    </div>
+    <button class="btn primary" id="mvApply" type="button" hidden>取り込む</button>
+    <div class="status" id="mvStatus"></div>
+    <p class="help">移す前の画面で「引っ越し用にコピー」→ 移した先で「貼り付けて取り込む」。設定（APIキーなど）と、写真を含む記録がそのまま移ります。</p>
+
     <button class="btn plain" id="sClose" type="button">閉じる</button>
   </div>
 </div>
@@ -790,7 +802,8 @@ $("mDelete").addEventListener("click", async () => {
 /* ---------- settings ---------- */
 function openSettings(){
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  setStatus($("sStatus"), ""); show($("setSheet"));
+  setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
+  show($("setSheet"));
 }
 $("openSettings").addEventListener("click", openSettings);
 $("setupBtn").addEventListener("click", openSettings);
@@ -841,6 +854,55 @@ $("sImport").addEventListener("click", async () => {
     setStatus($("sStatus"), added ? `${added}件の記録を読み込みました（写真はありません）。` : "新しく読み込む記録はありませんでした。");
   } catch (e){ setStatus($("sStatus"), "読み込めませんでした。URLと合言葉を確認してください。", "err"); }
 });
+
+/* ---------- 引っ越し（Safari ⇄ ホーム画面は保存場所が別なので、クリップボード経由で移す） ---------- */
+const MOVE = "foodlog-move:";
+$("mvCopy").addEventListener("click", async () => {
+  grab();
+  const text = MOVE + JSON.stringify({ v:1, settings, meals, queue:readQ() });
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus($("mvStatus"), `コピーしました（記録${meals.length}件）。移した先で「貼り付けて取り込む」を押してください。`);
+  } catch { setStatus($("mvStatus"), "コピーできませんでした。もう一度押してください。", "err"); }
+});
+$("mvPaste").addEventListener("click", async () => {
+  let text = "";
+  try { text = await navigator.clipboard.readText(); } catch {}
+  if (text.startsWith(MOVE)) return importMove(text);
+  if (text) return setStatus($("mvStatus"), "コピーされているのが引っ越しデータではありません。移す前の画面でもう一度コピーしてください。", "err");
+  $("mvBox").hidden = $("mvApply").hidden = false; $("mvText").value = "";
+  setStatus($("mvStatus"), "上の欄を長押しして「ペースト」し、「取り込む」を押してください。");
+});
+$("mvApply").addEventListener("click", () => importMove($("mvText").value.trim()));
+async function importMove(text){
+  let d = null;
+  try { if (text.startsWith(MOVE)) d = JSON.parse(text.slice(MOVE.length)); } catch {}
+  if (!d || !Array.isArray(d.meals)) return setStatus($("mvStatus"), "引っ越しデータを読めませんでした。移す前の画面でコピーし直してください。", "err");
+  const s = d.settings || {};
+  if (["key", "url", "token"].some(k => settings[k] && s[k] && settings[k] !== s[k])
+      && !confirm("この画面の設定を、移すデータの設定で置き換えます。よろしいですか？")) return;
+  setStatus($("mvStatus"), "取り込んでいます", "busy");
+  try {
+    for (const k of ["key", "model", "url", "token"]) if (s[k]) settings[k] = String(s[k]);
+    saveSettings();
+    const have = new Map(meals.map(m => [m.id, m])); let n = 0;
+    for (const m of d.meals){
+      if (!m || !m.id || typeof m.eatenAt !== "number") continue;
+      const cur = have.get(m.id);
+      if (cur && (cur.savedAt || 0) >= (m.savedAt || 0)) continue;
+      await DB.put(m); n++;
+    }
+    meals = (await DB.all()) || meals;
+    const q = readQ(), qi = new Set(q.map(o => o.id));
+    for (const o of d.queue || []) if (o && o.id && !qi.has(o.id)) q.push(o);
+    writeQ(q);
+    $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
+    $("mvBox").hidden = $("mvApply").hidden = true; $("mvText").value = "";
+    render(); flush();
+    try { await navigator.clipboard.writeText(""); } catch {} // APIキー入りの内容をクリップボードに残さない
+    setStatus($("mvStatus"), `取り込みました（設定と記録${n}件）。`);
+  } catch { setStatus($("mvStatus"), "取り込めませんでした。もう一度試してください。", "err"); }
+}
 
 /* ---------- boot ---------- */
 load().then(flush);

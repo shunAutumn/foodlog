@@ -29,6 +29,9 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **シートの列**：A日付(yyyy/MM/dd) B時刻(H:mm) C食べたもの D合計kcal E内訳 F メモ G記録ID。
   E内訳は `ご飯 150g 234kcal、みそ汁 40kcal（表示）` の形（gは0なら省く）。読み込み時は `parseDetail()` で品目に戻す。
   I1に日別合計のQUERY式があるので、A〜G列以外は書き換えない。
+- **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
+  `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
+  記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。
 - 撮影時刻：写真ファイルの `lastModified` が36時間以内ならそれを、それ以外は現在時刻を使う。
 
 ## 方針
