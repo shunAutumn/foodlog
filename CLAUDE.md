@@ -13,21 +13,22 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 ## しくみ
 - **写真の読み取り**：ブラウザから `https://api.anthropic.com/v1/messages` を直接呼ぶ
   （`anthropic-dangerous-direct-browser-access: true`）。モデルは設定で選択
-  （`claude-sonnet-5-5` / `claude-haiku-5-5`）。返答はJSON `{items:[{name,g,kcal,source}],comment}`。
+  （`claude-sonnet-5-5` / `claude-haiku-5-5`）。返答はJSON `{items:[{name,g,kcal,p,f,c,sugar,source}],comment}`（p/f/c/sugar はたんぱく質・脂質・炭水化物・糖質のg。アプリ内では sugar を s で持つ）。
   `source` は `"label"`（パッケージ等の表示から読んだ）か `"estimate"`（推定）。手で直すと `"manual"`。
 - **手入力**：下の「手入力」ボタン。写真なし・AIなしで同じ編集画面を開く。
 - **料理名の候補（AIなし）**：過去の記録（「前回」）と、`index.html` 内の目安表 `FOODS`（「目安」、
   `名前|量のめやす|よみ|g|kcal`）から出す。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
-  グラムを変えるとカロリーは `_rate`（kcal/g、保存しない）で比例して変わる。
+  グラムを変えるとカロリーと栄養素は `_base`（その時点のg・kcal・栄養素、保存しない）から `scaleTo()` で比例して変わる。
+  栄養素は任意（品目の「栄養素」で開く）。値がないものは null で、0g とは区別する。目安表 `FOODS` には栄養素はない。
 - **保存**：IndexedDB（DB名 `foodlog`、ストア `meals`、keyPath `id`）。
-  1件 = `{id, eatenAt(ms), items[{name,g,kcal,source}], total, thumb(dataURL), comment, savedAt}`。
+  1件 = `{id, eatenAt(ms), items[{name,g,kcal,p,f,c,s,source}], total, thumb(dataURL), comment, savedAt}`。
 - **設定**：localStorage `foodlog.settings`（APIキー、モデル、Apps ScriptのURL、合言葉）。
   APIキーはコードやリポジトリに絶対に入れない。
 - **スプレッドシート連携**：Apps ScriptのURLに `text/plain` でJSONをPOST（CORSのプリフライト回避）。
   アクション：`ping` / `list` / `upsert`（idで行を探して更新、なければ追加）/ `delete`。
   合言葉 `token` で認証。送信待ちはlocalStorage `foodlog.queue` に積み、online時・画面復帰時に再送。
 - **シートの列**：A日付(yyyy/MM/dd) B時刻(H:mm) C食べたもの D合計kcal E内訳 F メモ G記録ID。
-  E内訳は `ご飯 150g 234kcal、みそ汁 40kcal（表示）` の形（gは0なら省く）。読み込み時は `parseDetail()` で品目に戻す。
+  E内訳は `ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］、みそ汁 40kcal（表示）` の形（gは0なら省く）。読み込み時は `parseDetail()` で品目に戻す。
   I1に日別合計のQUERY式があるので、A〜G列以外は書き換えない。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。

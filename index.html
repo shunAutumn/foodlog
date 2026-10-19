@@ -138,6 +138,13 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .item .u{color:var(--muted); font-size:.85rem; min-width:2.2em}
 .item .tag{font-size:.68rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:1px 5px; flex:none}
 .item .x{border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
+.nuttoggle{margin-right:auto; border:0; background:none; color:var(--accent); font-weight:700; font-size:.8rem; padding:6px 0; cursor:pointer}
+.nuttoggle::after{content:" ＋"}
+.nuttoggle[aria-expanded=true]::after{content:" －"}
+.nuts{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px}
+.nut{display:flex; flex-direction:column; gap:3px; font-size:.68rem; font-weight:700; color:var(--muted); text-align:center}
+.item .nut input{width:100%; padding:6px 4px; text-align:center}
+.nutsum{margin:4px 8px 0; text-align:right; color:var(--muted); font-size:.82rem; font-weight:600; min-height:1em}
 .sugg{margin-top:8px; background:var(--surface2); border-radius:12px; overflow:hidden}
 .sugg button{display:flex; align-items:center; gap:8px; width:100%; border:0; border-bottom:1px solid var(--line); background:none; padding:10px 12px; text-align:left; font-size:.9rem; cursor:pointer}
 .sugg button:last-child{border-bottom:0}
@@ -174,6 +181,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   <section class="hero" aria-label="きょうの合計">
     <div><span class="big num" id="todayKcal">0</span><span class="unit">kcal</span></div>
     <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
+    <div class="sub num" id="todayNuts" hidden></div>
     <div class="week" id="week" aria-label="直近7日間"></div>
   </section>
 
@@ -216,6 +224,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="group" id="mItems"></div>
 
     <div class="totalrow"><span style="font-weight:700">合計</span><span><span class="v num" id="mTotal">0</span> kcal</span></div>
+    <p class="nutsum num" id="mNuts"></p>
 
     <button class="btn primary" id="mSave" type="button">記録する</button>
     <button class="btn plain" id="mCancel" type="button">キャンセル</button>
@@ -316,6 +325,8 @@ function render(){
   const tTotal = todays.reduce((s, m) => s + (m.total || 0), 0);
   $("todayKcal").textContent = fmt(tTotal);
   $("todaySub").textContent = todays.length ? `${todays.length}回の食事` : "きょうはまだ記録がありません";
+  const tn = nutLine(todays.flatMap(m => m.items || []));
+  $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
 
   // week bars
   const days = [];
@@ -387,10 +398,11 @@ const PROMPT =
 - 表示がない場合は、見た目の量から一般的な値で推定し、source を "estimate" にする。
 - 料理名は日本語で短く。
 - g には写っている量（グラム）を入れる。表示があればその値、なければ見た目から推定する。飲み物は ml をそのまま g として扱う。
+- p（たんぱく質）、f（脂質）、c（炭水化物）、sugar（糖質＝炭水化物から食物繊維を除いたもの）を、その量あたりのグラム数で入れる（小数1桁まで）。表示があればその値、なければ一般的な値から推定する。
 - 食べ物が写っていない場合は items を空配列にし、comment に理由を書く。
 
 次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
-{"items":[{"name":"料理名","g":数値,"kcal":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
+{"items":[{"name":"料理名","g":数値,"kcal":数値,"p":数値,"f":数値,"c":数値,"sugar":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
 
 async function askClaude(jpegDataUrl, signal){
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -441,7 +453,10 @@ function sheetRow(m){
     `${d.getHours()}:${pad(d.getMinutes())}`,
     safe(items.map(i => i.name).filter(Boolean).join("、")),
     m.total || 0,
-    safe(items.map(i => `${i.name || "（名前なし）"} ${i.g > 0 ? i.g + "g " : ""}${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}`).join("、")),
+    safe(items.map(i => {
+      const n = NUTS.filter(([k]) => i[k] != null).map(([k, , short]) => `${short}${i[k]}`).join(" ");
+      return `${i.name || "（名前なし）"} ${i.g > 0 ? i.g + "g " : ""}${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}${n ? `［${n}］` : ""}`;
+    }).join("、")),
     safe(m.comment || ""),
     m.id
   ];
@@ -491,9 +506,24 @@ function setStatus(el, text, kind){
   if (text){ const t = document.createElement("span"); t.textContent = text; el.append(t); }
 }
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const blank = () => ({ name:"", g:0, kcal:0, source:"manual", _rate:0 });
-// グラムを変えたときにカロリーを比例させるための kcal/g
-const withRate = it => { it._rate = it.g > 0 && it.kcal > 0 ? it.kcal / it.g : 0; return it; };
+// 栄養素（グラム）。値がないときは null（0g とは区別する）
+const NUTS = [["p", "たんぱく質", "P"], ["f", "脂質", "F"], ["c", "炭水化物", "C"], ["s", "糖質", "糖質"]];
+const r1 = x => Math.round(x * 10) / 10;
+const nut = v => v === "" || v == null || isNaN(Number(v)) ? null : Math.max(0, r1(Number(v)));
+const hasNuts = it => NUTS.some(([k]) => it[k] != null);
+const blank = () => ({ name:"", g:0, kcal:0, p:null, f:null, c:null, s:null, source:"manual", _base:null });
+// グラムを変えたときにカロリー・栄養素を比例させるための基準（保存しない）
+const withBase = it => { it._base = it.g > 0 ? { g:it.g, kcal:it.kcal, p:it.p, f:it.f, c:it.c, s:it.s } : null; return it; };
+function scaleTo(it, g){
+  it.g = g; const b = it._base;
+  if (!b || !(g > 0)) return;
+  const k = g / b.g;
+  it.kcal = Math.round(b.kcal * k);
+  for (const [n] of NUTS) it[n] = b[n] == null ? null : r1(b[n] * k);
+}
+// 食事全体の栄養素合計（どの品目にも値がなければ null）
+const nsum = (items, k) => items.some(i => i[k] != null) ? r1(items.reduce((s, i) => s + (Number(i[k]) || 0), 0)) : null;
+const nutLine = items => NUTS.map(([k, label]) => [label, nsum(items, k)]).filter(([, v]) => v != null).map(([l, v]) => `${l} ${fmt(v)}g`).join("・");
 
 /* ---------- 料理名の候補（AIなし：過去の記録＋目安表） ---------- */
 // 名前|量のめやす|よみ|g|kcal（一般的な1人前の目安。文部科学省「日本食品標準成分表」などを参考にした概算）
@@ -651,7 +681,7 @@ function buildHistory(){
       const k = norm(i.name);
       if (!k || !(i.kcal > 0) || seen.has(k)) continue;
       const d = FOODS.find(f => norm(f.name) === k); // 目安表にある名前なら、よみでも当たるように
-      seen.set(k, { name:i.name, note:"", g:i.g || 0, kcal:i.kcal, key:d ? d.key : k, src:"前回" });
+      seen.set(k, { name:i.name, note:"", g:i.g || 0, kcal:i.kcal, p:i.p, f:i.f, c:i.c, s:i.s, key:d ? d.key : k, src:"前回" });
     }
   past = [...seen.values()];
 }
@@ -662,12 +692,12 @@ function suggest(q){
     .filter(([, r]) => r >= 0).sort((a, b) => a[1] - b[1]).slice(0, 6).map(([e]) => e);
 }
 function pick(it, e){
-  it.name = e.name;
+  it.name = e.name; it.kcal = e.kcal;
+  for (const [k] of NUTS) it[k] = e[k] ?? null;
   if (e.g > 0){
-    it._rate = e.kcal / e.g;
-    if (!(it.g > 0)) it.g = e.g;
-    it.kcal = Math.round(it.g * it._rate);
-  } else { it.kcal = e.kcal; withRate(it); }
+    const g = it.g > 0 ? it.g : e.g;
+    it.g = e.g; withBase(it); scaleTo(it, g); // すでにグラムが入っていれば、その量に合わせる
+  } else withBase(it);
   it.source = "estimate";
 }
 
@@ -686,13 +716,27 @@ function renderItems(){
 
     const num = (val, label) => { const i = el("input"); i.type = "number"; i.inputMode = "numeric"; i.min = "0"; i.placeholder = "0"; i.value = val || ""; i.setAttribute("aria-label", label); return i; };
     const g = num(it.g, "量（グラム）"), k = num(it.kcal, "カロリー");
-    const total = () => { $("mTotal").textContent = fmt(sum(draft.items)); };
+
+    // 栄養素（任意）
+    const nb = el("div", "nuts"); nb.hidden = !(it._open || hasNuts(it));
+    const nIn = {};
+    for (const [key, label] of NUTS){
+      const cell = el("label", "nut");
+      const i = el("input"); i.type = "number"; i.inputMode = "decimal"; i.min = "0"; i.step = "0.1"; i.placeholder = "—";
+      i.value = it[key] ?? ""; i.setAttribute("aria-label", `${label}（グラム）`);
+      i.addEventListener("input", () => { it[key] = nut(i.value); withBase(it); total(); });
+      nIn[key] = i; cell.append(el("span", null, label), i); nb.append(cell);
+    }
+    const tg = el("button", "nuttoggle", "栄養素"); tg.type = "button"; tg.setAttribute("aria-expanded", String(!nb.hidden));
+    tg.addEventListener("click", () => { nb.hidden = !nb.hidden; it._open = !nb.hidden; tg.setAttribute("aria-expanded", String(!nb.hidden)); if (!nb.hidden) nIn.p.focus(); });
+
     g.addEventListener("input", () => {
-      it.g = Number(g.value) || 0;
-      if (it._rate && it.g > 0){ it.kcal = Math.round(it.g * it._rate); k.value = it.kcal; total(); }
+      scaleTo(it, Number(g.value) || 0);
+      k.value = it.kcal || ""; for (const [key] of NUTS) nIn[key].value = it[key] ?? "";
+      total();
     });
-    k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; withRate(it); total(); });
-    l2.append(g, el("span", "u", "g"), k, el("span", "u", "kcal"));
+    k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; withBase(it); total(); });
+    l2.append(tg, g, el("span", "u", "g"), k, el("span", "u", "kcal"));
 
     const showSugg = () => {
       sg.textContent = "";
@@ -711,16 +755,20 @@ function renderItems(){
     n.addEventListener("focus", showSugg);
     n.addEventListener("blur", () => setTimeout(() => { sg.hidden = true; }, 200));
 
-    r.append(l1, l2, sg); box.append(r);
+    r.append(l1, sg, l2, nb); box.append(r);
   });
   const add = el("button", "row add", "＋ 品目を追加"); add.type = "button";
   add.addEventListener("click", () => { draft.items.push(blank()); renderItems(); [...box.querySelectorAll(".item")].pop()?.querySelector("input")?.focus(); });
   box.append(add);
+  total();
+}
+function total(){
   $("mTotal").textContent = fmt(sum(draft.items));
+  $("mNuts").textContent = nutLine(draft.items);
 }
 function openMeal(m, isNew){
   buildHistory();
-  m.items = (m.items || []).map(i => withRate({ ...blank(), ...i }));
+  m.items = (m.items || []).map(i => withBase({ ...blank(), ...i }));
   draft = m; draft._new = isNew;
   $("mPhoto").hidden = !m.thumb; if (m.thumb) $("mPhoto").src = m.thumb;
   $("mTime").value = localInput(m.eatenAt);
@@ -757,9 +805,11 @@ $("file").addEventListener("change", async () => {
   try {
     const r = await askClaude(big, ctl.signal);
     if (draft !== mine) return;
-    const items = Array.isArray(r.items) ? r.items.map(i => withRate({
+    const items = Array.isArray(r.items) ? r.items.map(i => withBase({
       name:String(i.name ?? "").slice(0, 60), g:Math.max(0, Math.round(Number(i.g) || 0)),
-      kcal:Math.max(0, Math.round(Number(i.kcal) || 0)), source:i.source === "label" ? "label" : "estimate"
+      kcal:Math.max(0, Math.round(Number(i.kcal) || 0)),
+      p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.sugar),
+      source:i.source === "label" ? "label" : "estimate"
     })) : [];
     draft.items = items.length ? items : [blank()];
     draft.comment = typeof r.comment === "string" ? r.comment.slice(0, 120) : "";
@@ -776,8 +826,9 @@ $("file").addEventListener("change", async () => {
 
 $("mSave").addEventListener("click", async () => {
   if (!draft) return;
-  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0)
-    .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0), source:i.source || "manual" }));
+  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0 || hasNuts(i))
+    .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0),
+      p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
   $("mSave").disabled = true;
   try {
@@ -821,13 +872,15 @@ $("sTest").addEventListener("click", async () => {
   try { const r = await callSheet({ action:"ping" }); setStatus($("sStatus"), `つながりました（${r.sheet || "シート"}）。`); flush(); }
   catch (e){ setStatus($("sStatus"), e.message === "unauthorized" ? "合言葉が一致しません。" : "つながりませんでした。URLとデプロイ設定を確認してください。", "err"); }
 });
-// E列「内訳」（例：ご飯 150g 234kcal、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
+// E列「内訳」（例：ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
 function parseDetail(detail){
   const parts = String(detail || "").split("、").filter(Boolean), out = [];
   for (const p of parts){
-    const m = p.match(/^(.*?) (?:(\d+)g )?(\d+)kcal(（表示）)?$/);
+    const m = p.match(/^(.*?) (?:(\d+)g )?(\d+)kcal(（表示）)?(?:［(.*?)］)?$/);
     if (!m) return null;
-    out.push({ name:m[1] === "（名前なし）" ? "" : m[1], g:+(m[2] || 0), kcal:+m[3], source:m[4] ? "label" : "manual" });
+    const it = { name:m[1] === "（名前なし）" ? "" : m[1], g:+(m[2] || 0), kcal:+m[3], p:null, f:null, c:null, s:null, source:m[4] ? "label" : "manual" };
+    for (const [, key, v] of (m[5] || "").matchAll(/(糖質|P|F|C)([\d.]+)/g)) it[{ P:"p", F:"f", C:"c", 糖質:"s" }[key]] = +v;
+    out.push(it);
   }
   return out.length ? out : null;
 }
