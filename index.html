@@ -31,6 +31,7 @@
   }
 }
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{margin:0; background:var(--bg); color:var(--ink)}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
@@ -86,13 +87,17 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .tile:focus-visible,.round:focus-visible,.shutter:focus-visible,.btn:focus-visible{outline:3px solid var(--accent); outline-offset:3px; border-radius:20px}
 
 /* capture */
-.dock{position:fixed; left:0; right:0; bottom:0; z-index:6; display:flex; justify-content:center;
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:6; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:20px;
   padding:12px 0 calc(16px + env(safe-area-inset-bottom)); pointer-events:none;
   background:linear-gradient(to top, var(--bg) 45%, transparent)}
 .shutter{pointer-events:auto; width:74px; height:74px; border-radius:50%; border:0; cursor:pointer; background:var(--accent); color:var(--accent-ink);
   display:grid; place-items:center; box-shadow:0 0 0 6px var(--bg), 0 0 0 8px var(--accent-soft), var(--shadow); transition:transform .12s}
 .shutter:active{transform:scale(.93)}
 .shutter svg{width:30px; height:30px}
+.manual{pointer-events:auto; justify-self:end; display:flex; align-items:center; gap:6px; height:44px; padding:0 16px 0 13px; border:0; border-radius:999px;
+  background:var(--surface); color:var(--ink); font-weight:700; font-size:.9rem; box-shadow:var(--shadow); cursor:pointer}
+.manual svg{width:18px; height:18px}
+.manual:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
 .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 
 /* sheets */
@@ -123,6 +128,23 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .row .tag{font-size:.68rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:1px 5px; flex:none}
 .row .x{border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
 .row.add{color:var(--accent); font-weight:700; cursor:pointer; border:0; width:100%; background:none; text-align:left}
+.item{padding:10px 14px 12px; border-bottom:1px solid var(--line)}
+.line{display:flex; align-items:center; gap:8px}
+.line.sub{margin-top:6px; justify-content:flex-end}
+.item input{border:0; font:inherit; font-size:1rem; color:var(--ink); outline:none}
+.item input[type=text]{flex:1; min-width:0; background:transparent; font-weight:600; padding:6px 0}
+.item input[type=number]{width:76px; text-align:right; font-weight:700; background:var(--surface2); border-radius:10px; padding:6px 8px}
+.item input[type=number]:focus{box-shadow:0 0 0 2px var(--accent)}
+.item .u{color:var(--muted); font-size:.85rem; min-width:2.2em}
+.item .tag{font-size:.68rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:1px 5px; flex:none}
+.item .x{border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
+.sugg{margin-top:8px; background:var(--surface2); border-radius:12px; overflow:hidden}
+.sugg button{display:flex; align-items:center; gap:8px; width:100%; border:0; border-bottom:1px solid var(--line); background:none; padding:10px 12px; text-align:left; font-size:.9rem; cursor:pointer}
+.sugg button:last-child{border-bottom:0}
+.sugg .nm2{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sugg .nm2 small{color:var(--muted); margin-left:4px}
+.sugg .meta{color:var(--muted); white-space:nowrap}
+.sugg .src{font-size:.65rem; font-weight:800; color:var(--accent); border:1.5px solid currentColor; border-radius:6px; padding:0 4px; flex:none}
 .totalrow{display:flex; justify-content:space-between; align-items:baseline; margin:18px 8px 0}
 .totalrow .v{font-size:2rem; font-weight:800; letter-spacing:-.03em}
 .btn{display:block; width:100%; border:0; border-radius:16px; padding:16px; font-weight:800; font-size:1rem; cursor:pointer; margin-top:12px}
@@ -161,10 +183,14 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   <p class="syncline" id="syncline" role="status" aria-live="polite"></p>
 
   <div id="list"></div>
-  <p class="empty" id="empty">下のボタンで食べたものを撮ると、<br>ここに並んでいきます。</p>
+  <p class="empty" id="empty">下の緑のボタンで食べたものを撮るか、<br>「手入力」で入れると、<br>ここに並んでいきます。</p>
 </main>
 
 <div class="dock">
+  <button class="manual" id="manual" type="button" aria-label="写真なしで手入力して記録">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+    手入力
+  </button>
   <button class="shutter" id="shutter" type="button" aria-label="写真を撮って記録">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
   </button>
@@ -348,10 +374,11 @@ const PROMPT =
 - パッケージ、栄養成分表示、メニュー表などにカロリーが写っていて読み取れる場合は、推定ではなくその数値を使い、source を "label" にする。1袋あたり・100gあたりなどの単位に注意し、写っている量に合わせる。
 - 表示がない場合は、見た目の量から一般的な値で推定し、source を "estimate" にする。
 - 料理名は日本語で短く。
+- g には写っている量（グラム）を入れる。表示があればその値、なければ見た目から推定する。飲み物は ml をそのまま g として扱う。
 - 食べ物が写っていない場合は items を空配列にし、comment に理由を書く。
 
 次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
-{"items":[{"name":"料理名","kcal":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
+{"items":[{"name":"料理名","g":数値,"kcal":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
 
 async function askClaude(jpegDataUrl, signal){
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -402,7 +429,7 @@ function sheetRow(m){
     `${d.getHours()}:${pad(d.getMinutes())}`,
     safe(items.map(i => i.name).filter(Boolean).join("、")),
     m.total || 0,
-    safe(items.map(i => `${i.name || "（名前なし）"} ${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}`).join("、")),
+    safe(items.map(i => `${i.name || "（名前なし）"} ${i.g > 0 ? i.g + "g " : ""}${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}`).join("、")),
     safe(m.comment || ""),
     m.id
   ];
@@ -451,27 +478,237 @@ function setStatus(el, text, kind){
   if (kind === "busy"){ const s = document.createElement("span"); s.className = "spin"; el.append(s); }
   if (text){ const t = document.createElement("span"); t.textContent = text; el.append(t); }
 }
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const blank = () => ({ name:"", g:0, kcal:0, source:"manual", _rate:0 });
+// グラムを変えたときにカロリーを比例させるための kcal/g
+const withRate = it => { it._rate = it.g > 0 && it.kcal > 0 ? it.kcal / it.g : 0; return it; };
+
+/* ---------- 料理名の候補（AIなし：過去の記録＋目安表） ---------- */
+// 名前|量のめやす|よみ|g|kcal（一般的な1人前の目安。文部科学省「日本食品標準成分表」などを参考にした概算）
+const FOODS = `ご飯|茶碗1杯|ごはん|150|234
+ご飯|大盛り|ごはん|250|390
+玄米ご飯|茶碗1杯|げんまいごはん|150|228
+おにぎり（鮭）|1個|おにぎりしゃけさけ|110|180
+おにぎり（梅）|1個|おにぎりうめ|110|170
+おにぎり（ツナマヨ）|1個|おにぎりつなまよ|110|230
+食パン|6枚切り1枚|しょくぱん|60|150
+バタートースト|6枚切り1枚|ばたーとーすと|65|200
+ロールパン|1個|ろーるぱん|30|93
+クロワッサン|1個||40|180
+メロンパン|1個||100|350
+カレーパン|1個||100|320
+あんパン|1個||100|270
+サンドイッチ|ミックス1パック||150|350
+ハンバーガー|1個||110|260
+チーズバーガー|1個||120|310
+フライドポテト|Mサイズ||135|410
+かけうどん|1杯||450|330
+きつねうどん|1杯||480|420
+ざるそば|1枚||300|300
+かけそば|1杯||450|330
+醤油ラーメン|1杯|しょうゆらーめん|600|500
+味噌ラーメン|1杯|みそらーめん|650|600
+豚骨ラーメン|1杯|とんこつらーめん|600|600
+つけ麺|1人前|つけめん|600|700
+焼きそば|1人前|やきそば|300|550
+カップラーメン|1個||77|350
+カップ焼きそば|1個|かっぷやきそば|130|550
+ミートソーススパゲッティ|1人前|みーとそーすすぱげってぃぱすた|400|600
+カルボナーラ|1人前|ぱすた|380|750
+ナポリタン|1人前|ぱすた|350|600
+ペペロンチーノ|1人前|ぱすた|300|550
+チャーハン|1人前|ちゃーはん|300|650
+カレーライス|1皿||450|750
+ハヤシライス|1皿||450|700
+牛丼|並盛|ぎゅうどん|380|650
+親子丼|1杯|おやこどん|450|700
+カツ丼|1杯|かつどん|480|900
+天丼|1杯|てんどん|400|800
+海鮮丼|1杯|かいせんどん|400|600
+オムライス|1皿||400|750
+寿司|にぎり1貫|すしにぎり|30|55
+寿司|にぎり10貫|すしにぎり|300|550
+いなり寿司|1個|いなりずし|45|100
+ピザ|1切れ||80|220
+お好み焼き|1枚|おこのみやき|300|550
+たこ焼き|6個|たこやき|150|280
+餃子|6個|ぎょうざ|150|300
+シュウマイ|4個|しゅうまい|80|170
+春巻き|1本|はるまき|50|150
+肉まん|1個|にくまん|100|250
+唐揚げ|5個|からあげ|150|410
+とんかつ|ロース1枚|とんかつ|130|560
+ヒレカツ|1枚|ひれかつ|120|380
+エビフライ|2本|えびふらい|80|200
+コロッケ|1個|ころっけ|80|180
+メンチカツ|1個|めんちかつ|100|280
+天ぷら|盛り合わせ|てんぷら|200|450
+ハンバーグ|1個|はんばーぐ|150|330
+生姜焼き|1人前|しょうがやき|150|380
+チキン南蛮|1人前|ちきんなんばん|200|550
+サラダチキン|1個|さらだちきん|110|120
+焼き鮭|1切れ|やきざけさけしゃけ|80|160
+焼きさば|1切れ|やきさば|100|260
+さんまの塩焼き|1尾|さんま|100|280
+刺身|盛り合わせ|さしみ|120|170
+焼き鳥|2本|やきとり|80|180
+焼肉（カルビ）|100g|やきにくかるび|100|400
+ステーキ|1枚|すてーき|150|450
+麻婆豆腐|1人前|まーぼーどうふ|250|350
+回鍋肉|1人前|ほいこーろー|200|400
+青椒肉絲|1人前|ちんじゃおろーす|200|300
+酢豚|1人前|すぶた|250|450
+エビチリ|1人前|えびちり|200|280
+肉じゃが|1人前|にくじゃが|250|300
+筑前煮|1人前|ちくぜんに|200|200
+すき焼き|1人前|すきやき|350|650
+グラタン|1皿||300|450
+クリームシチュー|1皿|くりーむしちゅー|300|350
+おでん|盛り合わせ||400|300
+味噌汁|1杯|みそしる|180|40
+豚汁|1杯|とんじる|250|140
+卵焼き|2切れ|たまごやき|60|90
+目玉焼き|1個|めだまやき|55|100
+ゆで卵|1個|ゆでたまご|50|70
+納豆|1パック|なっとう|45|90
+冷奴|1/3丁|ひややっことうふ|100|70
+野菜サラダ|ドレッシングあり|やさいさらだ|120|80
+ポテトサラダ|小鉢|ぽてとさらだ|100|160
+マカロニサラダ|小鉢|まかろにさらだ|100|190
+きんぴらごぼう|小鉢|きんぴらごぼう|70|80
+ほうれん草のおひたし|小鉢|ほうれんそうのおひたし|70|20
+ひじき煮|小鉢|ひじきに|60|60
+枝豆|小皿|えだまめ|70|95
+ウインナー|3本|うぃんなーそーせーじ|60|190
+ベーコン|2枚|べーこん|40|160
+ハム|2枚|はむ|20|40
+バナナ|1本||100|90
+りんご|1/2個||125|70
+みかん|1個||80|40
+いちご|5粒||75|25
+キウイ|1個||85|45
+ぶどう|1房の半分||100|60
+ヨーグルト（無糖）|1カップ|よーぐると|100|56
+ヨーグルト（加糖）|1カップ|よーぐると|100|80
+プリン|1個|ぷりん|100|120
+ショートケーキ|1個|しょーとけーき|110|350
+チーズケーキ|1個|ちーずけーき|100|310
+シュークリーム|1個|しゅーくりーむ|70|160
+ドーナツ|1個|どーなつ|60|230
+アイスクリーム|1個|あいすくりーむ|100|180
+ソフトクリーム|1個|そふとくりーむ|120|175
+チョコレート|板チョコ半分|ちょこれーと|25|140
+ポテトチップス|1袋|ぽてとちっぷす|60|330
+クッキー|3枚|くっきー|30|150
+せんべい|2枚|せんべい|30|110
+大福|1個|だいふく|70|160
+どら焼き|1個|どらやき|80|225
+みたらし団子|1本|みたらしだんご|60|120
+グラノーラ|1食|ぐらのーら|50|220
+コーンフレーク|1食|こーんふれーく|40|150
+オートミール|1食|おーとみーる|30|110
+プロテイン|1杯|ぷろていん|30|120
+牛乳|コップ1杯|ぎゅうにゅう|200|130
+豆乳|コップ1杯|とうにゅう|200|110
+オレンジジュース|コップ1杯|おれんじじゅーす|200|90
+コーラ|350ml缶|こーら|350|160
+スポーツドリンク|500mlペット|すぽーつどりんく|500|125
+缶コーヒー|1缶（加糖）|かんこーひー|185|70
+コーヒー|ブラック|こーひー|150|6
+カフェラテ|トール|かふぇらて|350|190
+お茶|ペットボトル|おちゃ|500|0
+ビール|350ml缶|びーる|350|140
+ビール|中ジョッキ|びーる|435|175
+ハイボール|1杯|はいぼーる|350|70
+チューハイ|350ml缶|ちゅーはい|350|180
+日本酒|1合|にほんしゅ|180|190
+ワイン|グラス1杯|わいん|120|80`.split("\n").map(l => {
+  const [name, note, yomi, g, kcal] = l.split("|");
+  return { name, note, g:+g, kcal:+kcal, key:norm(name) + "|" + norm(yomi), src:"目安" };
+});
+// カタカナ・全角半角・大文字小文字の違いを吸収（入力途中のひらがなでも当たるように）
+function norm(s){
+  return String(s || "").normalize("NFKC").toLowerCase()
+    .replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/\s+/g, "");
+}
+let past = [];
+function buildHistory(){
+  const seen = new Map();
+  for (const m of [...meals].sort((a, b) => b.eatenAt - a.eatenAt))
+    for (const i of m.items || []){
+      const k = norm(i.name);
+      if (!k || !(i.kcal > 0) || seen.has(k)) continue;
+      const d = FOODS.find(f => norm(f.name) === k); // 目安表にある名前なら、よみでも当たるように
+      seen.set(k, { name:i.name, note:"", g:i.g || 0, kcal:i.kcal, key:d ? d.key : k, src:"前回" });
+    }
+  past = [...seen.values()];
+}
+function suggest(q){
+  q = norm(q); if (!q) return [];
+  const rank = (e, base) => e.key.split("|").some(k => k.startsWith(q)) ? base : e.key.includes(q) ? base + 1 : -1;
+  return [...past.map(e => [e, rank(e, 0)]), ...FOODS.map(e => [e, rank(e, 2)])]
+    .filter(([, r]) => r >= 0).sort((a, b) => a[1] - b[1]).slice(0, 6).map(([e]) => e);
+}
+function pick(it, e){
+  it.name = e.name;
+  if (e.g > 0){
+    it._rate = e.kcal / e.g;
+    if (!(it.g > 0)) it.g = e.g;
+    it.kcal = Math.round(it.g * it._rate);
+  } else { it.kcal = e.kcal; withRate(it); }
+  it.source = "estimate";
+}
+
 function renderItems(){
   const box = $("mItems"); box.textContent = "";
   draft.items.forEach((it, idx) => {
-    const r = document.createElement("div"); r.className = "row";
-    const n = document.createElement("input"); n.type = "text"; n.placeholder = "料理名"; n.value = it.name || ""; n.setAttribute("aria-label", "料理名");
-    n.addEventListener("input", () => { it.name = n.value; });
-    r.append(n);
-    if (it.source === "label"){ const t = document.createElement("span"); t.className = "tag"; t.textContent = "表示"; t.title = "写真の表示から読み取り"; r.append(t); }
-    const k = document.createElement("input"); k.type = "number"; k.inputMode = "numeric"; k.min = "0"; k.placeholder = "0"; k.value = it.kcal || ""; k.setAttribute("aria-label", "カロリー");
-    k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; $("mTotal").textContent = fmt(sum(draft.items)); });
-    const u = document.createElement("span"); u.className = "u"; u.textContent = "kcal";
-    const x = document.createElement("button"); x.type = "button"; x.className = "x"; x.textContent = "×"; x.setAttribute("aria-label", "この品目を外す");
+    const r = el("div", "item");
+    const l1 = el("div", "line"), l2 = el("div", "line sub"), sg = el("div", "sugg"); sg.hidden = true;
+    const n = el("input"); n.type = "text"; n.placeholder = "料理名"; n.value = it.name || ""; n.setAttribute("aria-label", "料理名");
+    n.autocomplete = "off"; n.enterKeyHint = "done";
+    l1.append(n);
+    if (it.source === "label"){ const t = el("span", "tag", "表示"); t.title = "写真の表示から読み取り"; l1.append(t); }
+    const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "この品目を外す");
     x.addEventListener("click", () => { draft.items.splice(idx, 1); renderItems(); });
-    r.append(k, u, x); box.append(r);
+    l1.append(x);
+
+    const num = (val, label) => { const i = el("input"); i.type = "number"; i.inputMode = "numeric"; i.min = "0"; i.placeholder = "0"; i.value = val || ""; i.setAttribute("aria-label", label); return i; };
+    const g = num(it.g, "量（グラム）"), k = num(it.kcal, "カロリー");
+    const total = () => { $("mTotal").textContent = fmt(sum(draft.items)); };
+    g.addEventListener("input", () => {
+      it.g = Number(g.value) || 0;
+      if (it._rate && it.g > 0){ it.kcal = Math.round(it.g * it._rate); k.value = it.kcal; total(); }
+    });
+    k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; withRate(it); total(); });
+    l2.append(g, el("span", "u", "g"), k, el("span", "u", "kcal"));
+
+    const showSugg = () => {
+      sg.textContent = "";
+      const list = suggest(n.value);
+      for (const e of list){
+        const b = el("button"); b.type = "button";
+        const nm = el("span", "nm2", e.name); if (e.note) nm.append(el("small", null, e.note));
+        b.append(el("span", "src", e.src), nm, el("span", "meta num", `${e.g > 0 ? e.g + "g・" : ""}${fmt(e.kcal)}kcal`));
+        b.addEventListener("pointerdown", ev => ev.preventDefault()); // 入力欄のフォーカスを保つ
+        b.addEventListener("click", () => { pick(it, e); renderItems(); });
+        sg.append(b);
+      }
+      sg.hidden = !list.length;
+    };
+    n.addEventListener("input", () => { it.name = n.value; showSugg(); });
+    n.addEventListener("focus", showSugg);
+    n.addEventListener("blur", () => setTimeout(() => { sg.hidden = true; }, 200));
+
+    r.append(l1, l2, sg); box.append(r);
   });
-  const add = document.createElement("button"); add.type = "button"; add.className = "row add"; add.textContent = "＋ 品目を追加";
-  add.addEventListener("click", () => { draft.items.push({ name:"", kcal:0, source:"manual" }); renderItems(); box.querySelector(".row:nth-last-child(2) input")?.focus(); });
+  const add = el("button", "row add", "＋ 品目を追加"); add.type = "button";
+  add.addEventListener("click", () => { draft.items.push(blank()); renderItems(); [...box.querySelectorAll(".item")].pop()?.querySelector("input")?.focus(); });
   box.append(add);
   $("mTotal").textContent = fmt(sum(draft.items));
 }
 function openMeal(m, isNew){
+  buildHistory();
+  m.items = (m.items || []).map(i => withRate({ ...blank(), ...i }));
   draft = m; draft._new = isNew;
   $("mPhoto").hidden = !m.thumb; if (m.thumb) $("mPhoto").src = m.thumb;
   $("mTime").value = localInput(m.eatenAt);
@@ -486,6 +723,10 @@ $("mTime").addEventListener("change", () => { const t = new Date($("mTime").valu
 $("mCancel").addEventListener("click", hide);
 
 $("shutter").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
+$("manual").addEventListener("click", () => {
+  openMeal({ id:newId(), eatenAt:Date.now(), items:[blank()], total:0, thumb:"", comment:"" }, true);
+  $("mItems").querySelector("input")?.focus();
+});
 $("file").addEventListener("change", async () => {
   const f = $("file").files && $("file").files[0]; if (!f) return;
   const now = Date.now();
@@ -494,7 +735,7 @@ $("file").addEventListener("change", async () => {
   try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
   openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"" }, true);
   if (!settings.key || !big){
-    draft.items = [{ name:"", kcal:0, source:"manual" }]; renderItems();
+    draft.items = [blank()]; renderItems();
     setStatus($("mStatus"), settings.key ? "写真を読み込めませんでした。手で入力してください。" : "APIキーが未設定なので、手で入力してください。", "err");
     return;
   }
@@ -504,10 +745,11 @@ $("file").addEventListener("change", async () => {
   try {
     const r = await askClaude(big, ctl.signal);
     if (draft !== mine) return;
-    const items = Array.isArray(r.items) ? r.items.map(i => ({
-      name:String(i.name ?? "").slice(0, 60), kcal:Math.max(0, Math.round(Number(i.kcal) || 0)), source:i.source === "label" ? "label" : "estimate"
+    const items = Array.isArray(r.items) ? r.items.map(i => withRate({
+      name:String(i.name ?? "").slice(0, 60), g:Math.max(0, Math.round(Number(i.g) || 0)),
+      kcal:Math.max(0, Math.round(Number(i.kcal) || 0)), source:i.source === "label" ? "label" : "estimate"
     })) : [];
-    draft.items = items.length ? items : [{ name:"", kcal:0, source:"manual" }];
+    draft.items = items.length ? items : [blank()];
     draft.comment = typeof r.comment === "string" ? r.comment.slice(0, 120) : "";
     $("mMemo").textContent = draft.comment;
     setStatus($("mStatus"), items.length ? "読み取りました。違うところは直してください。" : "食べ物が見つかりませんでした。手で入力できます。");
@@ -516,14 +758,14 @@ $("file").addEventListener("change", async () => {
     if (draft !== mine) return;
     const msg = e instanceof SyntaxError ? "うまく読み取れませんでした。手で入力してください。" : apiErrorText(e);
     if (msg) setStatus($("mStatus"), msg, "err");
-    if (!draft.items.length){ draft.items = [{ name:"", kcal:0, source:"manual" }]; renderItems(); }
+    if (!draft.items.length){ draft.items = [blank()]; renderItems(); }
   } finally { ctl = null; }
 });
 
 $("mSave").addEventListener("click", async () => {
   if (!draft) return;
-  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0)
-    .map(i => ({ name:(i.name || "").trim(), kcal:Math.round(Number(i.kcal) || 0), source:i.source || "manual" }));
+  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0)
+    .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
   $("mSave").disabled = true;
   try {
@@ -566,6 +808,16 @@ $("sTest").addEventListener("click", async () => {
   try { const r = await callSheet({ action:"ping" }); setStatus($("sStatus"), `つながりました（${r.sheet || "シート"}）。`); flush(); }
   catch (e){ setStatus($("sStatus"), e.message === "unauthorized" ? "合言葉が一致しません。" : "つながりませんでした。URLとデプロイ設定を確認してください。", "err"); }
 });
+// E列「内訳」（例：ご飯 150g 234kcal、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
+function parseDetail(detail){
+  const parts = String(detail || "").split("、").filter(Boolean), out = [];
+  for (const p of parts){
+    const m = p.match(/^(.*?) (?:(\d+)g )?(\d+)kcal(（表示）)?$/);
+    if (!m) return null;
+    out.push({ name:m[1] === "（名前なし）" ? "" : m[1], g:+(m[2] || 0), kcal:+m[3], source:m[4] ? "label" : "manual" });
+  }
+  return out.length ? out : null;
+}
 $("sImport").addEventListener("click", async () => {
   grab();
   if (!settings.url) return setStatus($("sStatus"), "連携URLを入れてください。", "err");
@@ -581,6 +833,8 @@ $("sImport").addEventListener("click", async () => {
       const t = new Date(+dm[1], +dm[2] - 1, +dm[3], tm ? +tm[1] : 12, tm ? +tm[2] : 0).getTime();
       const m = { id:String(id), eatenAt:t, items:String(names || "").split("、").filter(Boolean).map((n, i, a) => ({ name:n, kcal:a.length === 1 ? Number(kcal) || 0 : 0, source:"manual" })), total:Number(kcal) || 0, thumb:"", comment:String(memo || ""), savedAt:Date.now() };
       if (m.items.length > 1){ m.items = [{ name:String(names), kcal:m.total, source:"manual" }]; }
+      const parsed = parseDetail(detail);
+      if (parsed && sum(parsed) === m.total) m.items = parsed;
       await DB.put(m); meals.push(m); added++;
     }
     render();
