@@ -32,7 +32,10 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   角丸大きめ、記録は写真タイル2列。色はすべて `:root` のCSS変数で、ライト/ダーク両対応を崩さない。
 - safe-area（ノッチ・ホームバー）への配慮を維持する。
 - `index.html` を変えたら `sw.js` の `CACHE` 名のバージョンを上げる（古いキャッシュが残らないように）。
-- `Code.gs` を変えたら、利用者はApps Scriptで「デプロイを管理」→ 新バージョンで再デプロイが必要。その旨を伝える。
+- `Code.gs` を変えたら clasp で反映する（ログイン済み、`.clasp.json` 設定済み、`.claspignore` で `Code.gs` と `appsscript.json` だけ送る）：
+  `clasp push -f` → `clasp redeploy AKfycbzt8huL_vX0KwmeQXiTqzvFaHs6bIMv2g5slqvyWiPX0VfykgLxQNS28x8KMhw0ADf-Tw -d "変更内容"`。
+  このデプロイIDを使えばアプリに入れたURLは変わらない（`clasp deploy` で新規デプロイを作らない）。
+- 合言葉はスクリプト プロパティ `TOKEN` に入っている。コード・リポジトリには書かない（公開リポジトリ）。
 
 ## 動作確認
 - ローカル：`python3 -m http.server 8000` → http://localhost:8000

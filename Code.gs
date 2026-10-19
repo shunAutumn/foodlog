@@ -1,9 +1,12 @@
 /**
  * たべたもの記録 → Googleスプレッドシート連携
  * 使い方は README.md を見てください。
- * 下の合言葉を、自分だけが知っている文字列に変えてください（アプリの設定にも同じものを入れます）。
+ * 合言葉は「プロジェクトの設定」→「スクリプト プロパティ」に TOKEN という名前で入れてください
+ * （アプリの設定にも同じものを入れます）。コードには書きません。
  */
-const TOKEN = 'ここを自分の合言葉に変える';
+function token_() {
+  return PropertiesService.getScriptProperties().getProperty('TOKEN');
+}
 
 function sheet_() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
@@ -41,7 +44,9 @@ function doPost(e) {
   lock.waitLock(20000);
   try {
     const req = JSON.parse(e.postData.contents || '{}');
-    if (req.token !== TOKEN) return out_({ ok: false, error: 'unauthorized' });
+    const token = token_();
+    if (!token) return out_({ ok: false, error: 'スクリプト プロパティに TOKEN（合言葉）が入っていません' });
+    if (req.token !== token) return out_({ ok: false, error: 'unauthorized' });
     const sh = sheet_();
 
     if (req.action === 'ping') return out_({ ok: true, sheet: sh.getName() });
