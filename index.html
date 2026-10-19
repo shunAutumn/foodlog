@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F7F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1110" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="たべたもの">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>たべたもの記録</title>
+<style>
+:root{
+  --bg:#F6F7F4; --surface:#FFFFFF; --surface2:#EEF1EC; --ink:#111614; --muted:#6B7570; --line:#E3E7E1;
+  --accent:#1FA874; --accent-ink:#FFFFFF; --accent-soft:#DDF3E9; --label:#C9821A; --danger:#D9483B;
+  --glass:rgba(246,247,244,.78);
+  --shadow:0 10px 30px rgba(17,22,20,.10);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1110; --surface:#181C1A; --surface2:#202522; --ink:#F1F4F2; --muted:#8E9893; --line:#2A302C;
+    --accent:#3DD39A; --accent-ink:#06130D; --accent-soft:#163327; --label:#F2B65A; --danger:#FF7466;
+    --glass:rgba(14,17,16,.72);
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0; background:var(--bg); color:var(--ink)}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  min-height:100vh; padding-bottom:calc(120px + env(safe-area-inset-bottom));
+}
+button{font:inherit; color:inherit}
+.num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+/* top bar */
+.top{position:sticky; top:0; z-index:5; padding:calc(env(safe-area-inset-top) + 10px) 20px 10px;
+  background:var(--glass); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
+  display:flex; align-items:center; justify-content:space-between}
+.top .date{font-size:.8rem; color:var(--muted); font-weight:600}
+.top h1{margin:0; font-size:1.9rem; font-weight:800; letter-spacing:-.02em}
+.round{width:40px; height:40px; border-radius:50%; border:0; background:var(--surface2); display:grid; place-items:center; cursor:pointer}
+.round svg{width:20px; height:20px}
+
+main{max-width:640px; margin:0 auto; padding:6px 16px 0}
+
+/* hero */
+.hero{background:var(--surface); border-radius:24px; padding:20px 20px 16px; box-shadow:var(--shadow)}
+.hero .big{font-size:3.6rem; font-weight:800; letter-spacing:-.04em; line-height:1}
+.hero .unit{font-size:1rem; font-weight:700; color:var(--muted); margin-left:6px}
+.hero .sub{color:var(--muted); font-size:.85rem; margin-top:6px}
+.week{display:grid; grid-template-columns:repeat(7,1fr); gap:8px; align-items:end; height:84px; margin-top:18px}
+.week .col{display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end}
+.week .bar{width:100%; max-width:26px; border-radius:8px; background:var(--surface2); min-height:6px}
+.week .col.today .bar{background:var(--accent)}
+.week .d{font-size:.7rem; color:var(--muted); font-weight:600}
+.week .col.today .d{color:var(--ink)}
+
+.notice{margin-top:14px; background:var(--accent-soft); border-radius:18px; padding:14px 16px; font-size:.9rem; display:flex; gap:12px; align-items:center}
+.notice button{margin-left:auto; border:0; background:var(--accent); color:var(--accent-ink); border-radius:999px; padding:8px 14px; font-weight:700; cursor:pointer; white-space:nowrap}
+.syncline{font-size:.78rem; color:var(--muted); margin:12px 4px 0; min-height:1em}
+
+/* timeline */
+.day{margin-top:26px}
+.dayhead{display:flex; justify-content:space-between; align-items:baseline; padding:0 4px 10px}
+.dayhead h2{margin:0; font-size:1.05rem; font-weight:800}
+.dayhead .sum{font-weight:700; color:var(--muted); font-size:.9rem}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.tile{border:0; padding:0; background:none; text-align:left; cursor:pointer; display:block; width:100%}
+.ph{position:relative; aspect-ratio:1/1; border-radius:20px; overflow:hidden; background:var(--surface2)}
+.ph img{width:100%; height:100%; object-fit:cover; display:block}
+.ph .noimg{position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-size:2rem}
+.pill{position:absolute; bottom:8px; padding:4px 9px; border-radius:999px; font-size:.75rem; font-weight:800;
+  background:rgba(10,12,11,.55); color:#fff; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px)}
+.pill.t{left:8px} .pill.k{right:8px}
+.pending{position:absolute; top:8px; right:8px; width:10px; height:10px; border-radius:50%; background:var(--label); box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.tile .nm{margin:8px 4px 0; font-size:.88rem; font-weight:600; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.empty{text-align:center; color:var(--muted); padding:60px 20px 20px; font-size:.95rem; line-height:1.7}
+.tile:focus-visible,.round:focus-visible,.shutter:focus-visible,.btn:focus-visible{outline:3px solid var(--accent); outline-offset:3px; border-radius:20px}
+
+/* capture */
+.dock{position:fixed; left:0; right:0; bottom:0; z-index:6; display:flex; justify-content:center;
+  padding:12px 0 calc(16px + env(safe-area-inset-bottom)); pointer-events:none;
+  background:linear-gradient(to top, var(--bg) 45%, transparent)}
+.shutter{pointer-events:auto; width:74px; height:74px; border-radius:50%; border:0; cursor:pointer; background:var(--accent); color:var(--accent-ink);
+  display:grid; place-items:center; box-shadow:0 0 0 6px var(--bg), 0 0 0 8px var(--accent-soft), var(--shadow); transition:transform .12s}
+.shutter:active{transform:scale(.93)}
+.shutter svg{width:30px; height:30px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* sheets */
+.scrim{position:fixed; inset:0; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:opacity .2s; z-index:20}
+.scrim.open{opacity:1; pointer-events:auto}
+.sheet{position:fixed; left:0; right:0; bottom:0; z-index:21; max-height:94vh; overflow:auto; background:var(--bg);
+  border-radius:28px 28px 0 0; transform:translateY(105%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  padding:8px 16px calc(24px + env(safe-area-inset-bottom)); overscroll-behavior:contain}
+.sheet.open{transform:none}
+.sheet-in{max-width:600px; margin:0 auto}
+.grab{width:38px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 12px}
+.sheet h3{font-size:1.3rem; font-weight:800; margin:4px 4px 14px}
+.preview{width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:22px; display:block; background:var(--surface2)}
+.status{display:flex; gap:10px; align-items:center; margin:14px 4px 0; font-weight:700; font-size:.92rem}
+.status.err{color:var(--danger)}
+.spin{width:18px; height:18px; border-radius:50%; border:2.5px solid var(--accent-soft); border-top-color:var(--accent); animation:sp .8s linear infinite; flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.memo{color:var(--muted); font-size:.85rem; margin:6px 4px 0}
+.cap{font-size:.78rem; color:var(--muted); font-weight:700; margin:20px 8px 6px}
+.group{background:var(--surface); border-radius:18px; overflow:hidden}
+.row{display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--line); min-height:52px}
+.row:last-child{border-bottom:0}
+.row label{flex:none; font-weight:600}
+.row input{flex:1; min-width:0; border:0; background:transparent; font:inherit; color:var(--ink); padding:4px 0; outline:none}
+.row input[type=number]{flex:0 0 70px; text-align:right; font-weight:700}
+.row input[type=datetime-local]{text-align:right}
+.row .u{color:var(--muted); font-size:.85rem}
+.row .tag{font-size:.68rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:1px 5px; flex:none}
+.row .x{border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
+.row.add{color:var(--accent); font-weight:700; cursor:pointer; border:0; width:100%; background:none; text-align:left}
+.totalrow{display:flex; justify-content:space-between; align-items:baseline; margin:18px 8px 0}
+.totalrow .v{font-size:2rem; font-weight:800; letter-spacing:-.03em}
+.btn{display:block; width:100%; border:0; border-radius:16px; padding:16px; font-weight:800; font-size:1rem; cursor:pointer; margin-top:12px}
+.btn.primary{background:var(--accent); color:var(--accent-ink)}
+.btn.plain{background:var(--surface); color:var(--ink)}
+.btn.danger{background:none; color:var(--danger)}
+.btn[disabled]{opacity:.5}
+.help{font-size:.8rem; color:var(--muted); margin:8px 8px 0; line-height:1.6}
+.help a{color:var(--accent)}
+select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1; text-align:right; direction:rtl}
+@media (prefers-reduced-motion: reduce){.sheet,.scrim{transition:none}.spin{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="date" id="today"></div>
+    <h1>たべたもの</h1>
+  </div>
+  <button class="round" id="openSettings" type="button" aria-label="設定">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+
+<main>
+  <section class="hero" aria-label="きょうの合計">
+    <div><span class="big num" id="todayKcal">0</span><span class="unit">kcal</span></div>
+    <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
+    <div class="week" id="week" aria-label="直近7日間"></div>
+  </section>
+
+  <div class="notice" id="setupNotice" hidden>
+    <span>APIキーを入れると、写真から料理とカロリーを読み取れます。</span>
+    <button type="button" id="setupBtn">設定する</button>
+  </div>
+  <p class="syncline" id="syncline" role="status" aria-live="polite"></p>
+
+  <div id="list"></div>
+  <p class="empty" id="empty">下のボタンで食べたものを撮ると、<br>ここに並んでいきます。</p>
+</main>
+
+<div class="dock">
+  <button class="shutter" id="shutter" type="button" aria-label="写真を撮って記録">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
+  </button>
+  <input type="file" id="file" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- meal sheet -->
+<div class="sheet" id="mealSheet" role="dialog" aria-modal="true" aria-labelledby="mealTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="mealTitle" class="sr">食事の内容</h3>
+    <img class="preview" id="mPhoto" alt="">
+    <div class="status" id="mStatus"></div>
+    <p class="memo" id="mMemo"></p>
+
+    <div class="cap">いつ</div>
+    <div class="group"><div class="row"><label for="mTime">食べた時間</label><input type="datetime-local" id="mTime"></div></div>
+
+    <div class="cap">食べたもの</div>
+    <div class="group" id="mItems"></div>
+
+    <div class="totalrow"><span style="font-weight:700">合計</span><span><span class="v num" id="mTotal">0</span> kcal</span></div>
+
+    <button class="btn primary" id="mSave" type="button">記録する</button>
+    <button class="btn plain" id="mCancel" type="button">キャンセル</button>
+    <button class="btn danger" id="mDelete" type="button" hidden>この記録を削除</button>
+  </div>
+</div>
+
+<!-- settings sheet -->
+<div class="sheet" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="setTitle">設定</h3>
+
+    <div class="cap">写真の読み取り（Claude API）</div>
+    <div class="group">
+      <div class="row"><label for="sKey">APIキー</label><input id="sKey" type="password" autocomplete="off" placeholder="sk-ant-..." spellcheck="false"></div>
+      <div class="row"><label for="sModel">精度</label>
+        <select id="sModel">
+          <option value="claude-sonnet-5-5">しっかり読む（Sonnet）</option>
+          <option value="claude-haiku-5-5">速くて安い（Haiku）</option>
+        </select></div>
+    </div>
+    <p class="help">キーはこのスマホの中にだけ保存され、Anthropicにだけ送られます。</p>
+
+    <div class="cap">Googleスプレッドシート</div>
+    <div class="group">
+      <div class="row"><label for="sUrl">連携URL</label><input id="sUrl" type="url" placeholder="https://script.google.com/..." spellcheck="false" autocomplete="off"></div>
+      <div class="row"><label for="sToken">合言葉</label><input id="sToken" type="password" autocomplete="off" placeholder="Apps Scriptと同じもの"></div>
+    </div>
+    <p class="help">設定のしかたは同じフォルダの README.md を見てください。</p>
+
+    <button class="btn primary" id="sSave" type="button">保存する</button>
+    <button class="btn plain" id="sTest" type="button">スプレッドシートとの接続を確認</button>
+    <button class="btn plain" id="sImport" type="button">スプレッドシートから記録を読み込む</button>
+    <div class="status" id="sStatus"></div>
+    <button class="btn plain" id="sClose" type="button">閉じる</button>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const WEEK = ["日","月","火","水","木","金","土"];
+const dayKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const localInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const sum = items => Math.round(items.reduce((s, i) => s + (Number(i.kcal) || 0), 0));
+const fmt = n => Number(n || 0).toLocaleString("ja-JP");
+
+/* ---------- settings ---------- */
+const SKEY = "foodlog.settings";
+let settings = { key:"", model:"claude-sonnet-5-5", url:"", token:"" };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SKEY) || "{}")); } catch {}
+const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch {} };
+
+/* ---------- IndexedDB ---------- */
+const DB = (() => {
+  let p;
+  const open = () => p || (p = new Promise((res, rej) => {
+    const r = indexedDB.open("foodlog", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("meals", { keyPath:"id" });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction("meals", mode); const s = t.objectStore("meals"); const out = fn(s);
+    t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
+  return {
+    all: () => tx("readonly", s => s.getAll()),
+    put: m => tx("readwrite", s => s.put(m)),
+    del: id => tx("readwrite", s => s.delete(id))
+  };
+})();
+
+let meals = [];
+async function load(){ try { meals = (await DB.all()) || []; } catch { meals = []; } render(); }
+
+/* ---------- render ---------- */
+function render(){
+  const now = new Date();
+  $("today").textContent = `${now.getMonth()+1}月${now.getDate()}日（${WEEK[now.getDay()]}）`;
+  const byDay = new Map();
+  for (const m of meals){ const k = dayKey(m.eatenAt); (byDay.get(k) || byDay.set(k, []).get(k)).push(m); }
+  const tk = dayKey(now.getTime());
+  const todays = byDay.get(tk) || [];
+  const tTotal = todays.reduce((s, m) => s + (m.total || 0), 0);
+  $("todayKcal").textContent = fmt(tTotal);
+  $("todaySub").textContent = todays.length ? `${todays.length}回の食事` : "きょうはまだ記録がありません";
+
+  // week bars
+  const days = [];
+  for (let i = 6; i >= 0; i--){ const d = new Date(now); d.setDate(now.getDate() - i); d.setHours(12,0,0,0); days.push(d); }
+  const totals = days.map(d => (byDay.get(dayKey(d.getTime())) || []).reduce((s, m) => s + (m.total || 0), 0));
+  const max = Math.max(1, ...totals);
+  const wk = $("week"); wk.textContent = "";
+  days.forEach((d, i) => {
+    const c = document.createElement("div"); c.className = "col" + (i === 6 ? " today" : "");
+    const b = document.createElement("div"); b.className = "bar"; b.style.height = `${Math.max(6, Math.round(totals[i] / max * 60))}px`;
+    const l = document.createElement("div"); l.className = "d"; l.textContent = i === 6 ? "今日" : WEEK[d.getDay()];
+    c.title = `${d.getMonth()+1}/${d.getDate()} ${fmt(totals[i])}kcal`;
+    c.append(b, l); wk.append(c);
+  });
+
+  // list
+  const list = $("list"); list.textContent = "";
+  const keys = [...byDay.keys()].sort().reverse();
+  $("empty").hidden = keys.length > 0;
+  const yk = (() => { const y = new Date(now); y.setDate(now.getDate() - 1); return dayKey(y.getTime()); })();
+  for (const k of keys){
+    const arr = byDay.get(k).sort((a, b) => b.eatenAt - a.eatenAt);
+    const d = new Date(arr[0].eatenAt);
+    const sec = document.createElement("section"); sec.className = "day";
+    const h = document.createElement("div"); h.className = "dayhead";
+    const h2 = document.createElement("h2");
+    h2.textContent = k === tk ? "今日" : k === yk ? "昨日" : `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
+    const s = document.createElement("span"); s.className = "sum num";
+    s.textContent = fmt(arr.reduce((t, m) => t + (m.total || 0), 0)) + " kcal";
+    h.append(h2, s);
+    const g = document.createElement("div"); g.className = "grid";
+    for (const m of arr){
+      const b = document.createElement("button"); b.type = "button"; b.className = "tile";
+      const ph = document.createElement("div"); ph.className = "ph";
+      if (m.thumb){ const im = document.createElement("img"); im.src = m.thumb; im.alt = ""; im.loading = "lazy"; ph.append(im); }
+      else { const n = document.createElement("div"); n.className = "noimg"; n.textContent = "🍽"; ph.append(n); }
+      const md = new Date(m.eatenAt);
+      const t = document.createElement("span"); t.className = "pill t num"; t.textContent = `${md.getHours()}:${pad(md.getMinutes())}`;
+      const kc = document.createElement("span"); kc.className = "pill k num"; kc.textContent = `${fmt(m.total)} kcal`;
+      ph.append(t, kc);
+      if (pendingIds().has(m.id)){ const p = document.createElement("span"); p.className = "pending"; p.title = "スプレッドシート未反映"; ph.append(p); }
+      const nm = document.createElement("div"); nm.className = "nm";
+      nm.textContent = (m.items || []).map(i => i.name).filter(Boolean).join("、") || "（品目なし）";
+      b.append(ph, nm);
+      b.addEventListener("click", () => openMeal(structuredClone(m), false));
+      g.append(b);
+    }
+    sec.append(h, g); list.append(sec);
+  }
+  $("setupNotice").hidden = !!settings.key;
+}
+
+/* ---------- image helpers ---------- */
+async function shrink(file, max, q){
+  let src = await createImageBitmap(file).catch(() => null);
+  if (!src) src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
+  const k = Math.min(1, max / Math.max(src.width, src.height));
+  const c = document.createElement("canvas"); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", q);
+}
+
+/* ---------- Claude API ---------- */
+const PROMPT =
+`添付の写真は、ある人が食べた食事の写真です。写っている食べ物・飲み物を特定し、それぞれのカロリーを答えてください。
+
+ルール:
+- パッケージ、栄養成分表示、メニュー表などにカロリーが写っていて読み取れる場合は、推定ではなくその数値を使い、source を "label" にする。1袋あたり・100gあたりなどの単位に注意し、写っている量に合わせる。
+- 表示がない場合は、見た目の量から一般的な値で推定し、source を "estimate" にする。
+- 料理名は日本語で短く。
+- 食べ物が写っていない場合は items を空配列にし、comment に理由を書く。
+
+次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
+{"items":[{"name":"料理名","kcal":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
+
+async function askClaude(jpegDataUrl, signal){
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", signal,
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":settings.key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({
+      model:settings.model, max_tokens:1024,
+      messages:[{ role:"user", content:[
+        { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:jpegDataUrl.split(",")[1] } },
+        { type:"text", text:PROMPT }
+      ]}]
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok){
+    const msg = (data && data.error && data.error.message) || "";
+    const err = new Error(msg); err.status = res.status; throw err;
+  }
+  const text = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+  const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  return JSON.parse(text.slice(a, b + 1));
+}
+function apiErrorText(e){
+  if (e.name === "AbortError") return "";
+  if (e.status === 401) return "APIキーが正しくありません。設定を確認してください。";
+  if (e.status === 400 && /credit|balance/i.test(e.message)) return "APIのクレジットが足りません。Anthropic Consoleでチャージしてください。";
+  if (e.status === 429 || e.status === 529) return "混み合っています。少し待ってから撮り直すか、手で入力してください。";
+  if (e.status === 404) return "設定の「精度」で選んだモデルが使えません。もう一方を選んでください。";
+  if (!e.status) return "通信できませんでした。電波を確認するか、手で入力してください。";
+  return `読み取れませんでした（${e.status}）。手で入力できます。`;
+}
+
+/* ---------- Google Sheets (Apps Script) ---------- */
+const QKEY = "foodlog.queue";
+const readQ = () => { try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch { return []; } };
+const writeQ = q => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch {} };
+const pendingIds = () => new Set(readQ().map(o => o.id));
+const safe = s => { s = String(s ?? ""); return /^[=+\-@]/.test(s) ? "'" + s : s; };
+function sheetRow(m){
+  const d = new Date(m.eatenAt), items = m.items || [];
+  return [
+    `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`,
+    `${d.getHours()}:${pad(d.getMinutes())}`,
+    safe(items.map(i => i.name).filter(Boolean).join("、")),
+    m.total || 0,
+    safe(items.map(i => `${i.name || "（名前なし）"} ${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}`).join("、")),
+    safe(m.comment || ""),
+    m.id
+  ];
+}
+async function callSheet(body){
+  const res = await fetch(settings.url, { method:"POST", body:JSON.stringify({ ...body, token:settings.token }) });
+  const data = await res.json();
+  if (!data.ok) { const e = new Error(data.error || "error"); e.sheet = true; throw e; }
+  return data;
+}
+function enqueue(op){
+  const q = readQ().filter(o => o.id !== op.id);
+  q.push(op); writeQ(q); flush();
+}
+let flushing = false;
+async function flush(){
+  if (flushing || !settings.url) { if (!settings.url && readQ().length) $("syncline").textContent = "スプレッドシートの連携URLが未設定です。"; return; }
+  flushing = true;
+  let q = readQ(), done = 0;
+  try {
+    while (q.length){
+      await callSheet(q[0]);
+      q = readQ(); q.shift(); writeQ(q); done++;
+    }
+    if (done) $("syncline").textContent = "スプレッドシートに反映しました。";
+  } catch (e){
+    $("syncline").textContent = e.sheet && e.message === "unauthorized"
+      ? "合言葉がApps Scriptと一致しません。設定を確認してください。"
+      : `スプレッドシートに未反映の記録が${readQ().length}件あります。つながったら自動で送ります。`;
+  } finally { flushing = false; render(); }
+}
+addEventListener("online", flush);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) flush(); });
+
+/* ---------- sheets UI ---------- */
+const scrim = $("scrim");
+let openSheetEl = null;
+function show(el){ openSheetEl = el; el.classList.add("open"); scrim.classList.add("open"); }
+function hide(){ if (openSheetEl) openSheetEl.classList.remove("open"); scrim.classList.remove("open"); openSheetEl = null; if (ctl) { ctl.abort(); ctl = null; } draft = null; }
+scrim.addEventListener("click", hide);
+document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
+
+let draft = null, ctl = null;
+function setStatus(el, text, kind){
+  el.textContent = ""; el.className = "status" + (kind === "err" ? " err" : "");
+  if (kind === "busy"){ const s = document.createElement("span"); s.className = "spin"; el.append(s); }
+  if (text){ const t = document.createElement("span"); t.textContent = text; el.append(t); }
+}
+function renderItems(){
+  const box = $("mItems"); box.textContent = "";
+  draft.items.forEach((it, idx) => {
+    const r = document.createElement("div"); r.className = "row";
+    const n = document.createElement("input"); n.type = "text"; n.placeholder = "料理名"; n.value = it.name || ""; n.setAttribute("aria-label", "料理名");
+    n.addEventListener("input", () => { it.name = n.value; });
+    r.append(n);
+    if (it.source === "label"){ const t = document.createElement("span"); t.className = "tag"; t.textContent = "表示"; t.title = "写真の表示から読み取り"; r.append(t); }
+    const k = document.createElement("input"); k.type = "number"; k.inputMode = "numeric"; k.min = "0"; k.placeholder = "0"; k.value = it.kcal || ""; k.setAttribute("aria-label", "カロリー");
+    k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; $("mTotal").textContent = fmt(sum(draft.items)); });
+    const u = document.createElement("span"); u.className = "u"; u.textContent = "kcal";
+    const x = document.createElement("button"); x.type = "button"; x.className = "x"; x.textContent = "×"; x.setAttribute("aria-label", "この品目を外す");
+    x.addEventListener("click", () => { draft.items.splice(idx, 1); renderItems(); });
+    r.append(k, u, x); box.append(r);
+  });
+  const add = document.createElement("button"); add.type = "button"; add.className = "row add"; add.textContent = "＋ 品目を追加";
+  add.addEventListener("click", () => { draft.items.push({ name:"", kcal:0, source:"manual" }); renderItems(); box.querySelector(".row:nth-last-child(2) input")?.focus(); });
+  box.append(add);
+  $("mTotal").textContent = fmt(sum(draft.items));
+}
+function openMeal(m, isNew){
+  draft = m; draft._new = isNew;
+  $("mPhoto").hidden = !m.thumb; if (m.thumb) $("mPhoto").src = m.thumb;
+  $("mTime").value = localInput(m.eatenAt);
+  $("mMemo").textContent = m.comment || "";
+  setStatus($("mStatus"), "");
+  $("mDelete").hidden = isNew;
+  $("mSave").textContent = isNew ? "記録する" : "保存する";
+  $("mSave").disabled = false;
+  renderItems(); show($("mealSheet"));
+}
+$("mTime").addEventListener("change", () => { const t = new Date($("mTime").value).getTime(); if (!isNaN(t) && draft) draft.eatenAt = t; });
+$("mCancel").addEventListener("click", hide);
+
+$("shutter").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
+$("file").addEventListener("change", async () => {
+  const f = $("file").files && $("file").files[0]; if (!f) return;
+  const now = Date.now();
+  const eatenAt = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
+  let thumb = "", big = "";
+  try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
+  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"" }, true);
+  if (!settings.key || !big){
+    draft.items = [{ name:"", kcal:0, source:"manual" }]; renderItems();
+    setStatus($("mStatus"), settings.key ? "写真を読み込めませんでした。手で入力してください。" : "APIキーが未設定なので、手で入力してください。", "err");
+    return;
+  }
+  setStatus($("mStatus"), "写真を読み取っています", "busy");
+  ctl = new AbortController();
+  const mine = draft;
+  try {
+    const r = await askClaude(big, ctl.signal);
+    if (draft !== mine) return;
+    const items = Array.isArray(r.items) ? r.items.map(i => ({
+      name:String(i.name ?? "").slice(0, 60), kcal:Math.max(0, Math.round(Number(i.kcal) || 0)), source:i.source === "label" ? "label" : "estimate"
+    })) : [];
+    draft.items = items.length ? items : [{ name:"", kcal:0, source:"manual" }];
+    draft.comment = typeof r.comment === "string" ? r.comment.slice(0, 120) : "";
+    $("mMemo").textContent = draft.comment;
+    setStatus($("mStatus"), items.length ? "読み取りました。違うところは直してください。" : "食べ物が見つかりませんでした。手で入力できます。");
+    renderItems();
+  } catch (e){
+    if (draft !== mine) return;
+    const msg = e instanceof SyntaxError ? "うまく読み取れませんでした。手で入力してください。" : apiErrorText(e);
+    if (msg) setStatus($("mStatus"), msg, "err");
+    if (!draft.items.length){ draft.items = [{ name:"", kcal:0, source:"manual" }]; renderItems(); }
+  } finally { ctl = null; }
+});
+
+$("mSave").addEventListener("click", async () => {
+  if (!draft) return;
+  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0)
+    .map(i => ({ name:(i.name || "").trim(), kcal:Math.round(Number(i.kcal) || 0), source:i.source || "manual" }));
+  const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
+  $("mSave").disabled = true;
+  try {
+    await DB.put(m);
+    meals = meals.filter(x => x.id !== m.id).concat(m);
+    hide(); render();
+    enqueue({ action:"upsert", id:m.id, row:sheetRow(m) });
+  } catch {
+    setStatus($("mStatus"), "保存できませんでした。もう一度押してください。", "err");
+    $("mSave").disabled = false;
+  }
+});
+$("mDelete").addEventListener("click", async () => {
+  if (!draft || !confirm("この記録を削除しますか？")) return;
+  const id = draft.id;
+  await DB.del(id).catch(() => {});
+  meals = meals.filter(x => x.id !== id);
+  hide(); render();
+  enqueue({ action:"delete", id });
+});
+
+/* ---------- settings ---------- */
+function openSettings(){
+  $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
+  setStatus($("sStatus"), ""); show($("setSheet"));
+}
+$("openSettings").addEventListener("click", openSettings);
+$("setupBtn").addEventListener("click", openSettings);
+$("sClose").addEventListener("click", hide);
+function grab(){
+  settings.key = $("sKey").value.trim(); settings.model = $("sModel").value;
+  settings.url = $("sUrl").value.trim(); settings.token = $("sToken").value.trim();
+  saveSettings();
+}
+$("sSave").addEventListener("click", () => { grab(); setStatus($("sStatus"), "保存しました。"); render(); flush(); });
+$("sTest").addEventListener("click", async () => {
+  grab();
+  if (!settings.url) return setStatus($("sStatus"), "連携URLを入れてください。", "err");
+  setStatus($("sStatus"), "確認しています", "busy");
+  try { const r = await callSheet({ action:"ping" }); setStatus($("sStatus"), `つながりました（${r.sheet || "シート"}）。`); flush(); }
+  catch (e){ setStatus($("sStatus"), e.message === "unauthorized" ? "合言葉が一致しません。" : "つながりませんでした。URLとデプロイ設定を確認してください。", "err"); }
+});
+$("sImport").addEventListener("click", async () => {
+  grab();
+  if (!settings.url) return setStatus($("sStatus"), "連携URLを入れてください。", "err");
+  setStatus($("sStatus"), "読み込んでいます", "busy");
+  try {
+    const r = await callSheet({ action:"list" });
+    const have = new Set(meals.map(m => m.id)); let added = 0;
+    for (const row of r.rows || []){
+      const [date, time, names, kcal, detail, memo, id] = row;
+      if (!id || have.has(String(id))) continue;
+      const dm = String(date).match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/), tm = String(time).match(/(\d{1,2}):(\d{2})/);
+      if (!dm) continue;
+      const t = new Date(+dm[1], +dm[2] - 1, +dm[3], tm ? +tm[1] : 12, tm ? +tm[2] : 0).getTime();
+      const m = { id:String(id), eatenAt:t, items:String(names || "").split("、").filter(Boolean).map((n, i, a) => ({ name:n, kcal:a.length === 1 ? Number(kcal) || 0 : 0, source:"manual" })), total:Number(kcal) || 0, thumb:"", comment:String(memo || ""), savedAt:Date.now() };
+      if (m.items.length > 1){ m.items = [{ name:String(names), kcal:m.total, source:"manual" }]; }
+      await DB.put(m); meals.push(m); added++;
+    }
+    render();
+    setStatus($("sStatus"), added ? `${added}件の記録を読み込みました（写真はありません）。` : "新しく読み込む記録はありませんでした。");
+  } catch (e){ setStatus($("sStatus"), "読み込めませんでした。URLと合言葉を確認してください。", "err"); }
+});
+
+/* ---------- boot ---------- */
+load().then(flush);
+setInterval(() => { if (!openSheetEl) render(); }, 5 * 60e3);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
