@@ -39,6 +39,11 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   DriveApp は drive.file では使えない（ドライブ全体の権限を要求する）ので、拡張サービス Drive（v3）を使う。写真の取得は UrlFetchApp で alt=media。
   権限を増やしたら、利用者がApps Scriptの画面で関数を実行して許可してから `clasp redeploy` する（先にデプロイすると許可されるまで全部止まる）。
 - **あとから写真**：編集画面の「写真を追加／写真を変える」（`#file2`）。AIでは読み取らず、保存時に `_photoChanged` なら `photo_put` で差し替える。
+- **体重**：IndexedDB `weights` ストア（DBバージョン3、keyPath `date`=yyyy-MM-dd）。トップの体重カードにSVGの折れ線グラフ
+  （目標体重は破線、期間は localStorage `foodlog.wRange`）。スプレッドシートは「体重」シート（なければ末尾に作る、A日付 B体重）に
+  `weight_upsert`（kg が null なら削除）/ `weight_list`。送信は記録と同じ `foodlog.queue`（id は `w:日付`）。
+- **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から
+  ミフリン・セントジョー式で基礎代謝 → ×活動係数で TDEE → 目標に向けて ペース×7200/7 kcal を増減。基礎代謝は下回らない。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。

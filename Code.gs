@@ -69,6 +69,26 @@ function authorize() {
   photoFolder_();
 }
 
+// 体重は「体重」シート（A日付 yyyy-MM-dd、B体重kg）。なければ最後に作る（1枚目のシートの位置は変えない）
+function weightSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ws = ss.getSheetByName('体重');
+  if (!ws) {
+    ws = ss.insertSheet('体重', ss.getSheets().length);
+    ws.getRange(1, 1, 1, 2).setValues([['日付', '体重(kg)']]);
+    ws.getRange('A:A').setNumberFormat('@');
+  }
+  return ws;
+}
+
+function findWeightRow_(ws, date) {
+  const last = ws.getLastRow();
+  if (last < 2) return 0;
+  const ds = ws.getRange(2, 1, last - 1, 1).getDisplayValues();
+  for (let i = 0; i < ds.length; i++) if (ds[i][0] === String(date)) return i + 2;
+  return 0;
+}
+
 // A列で最後に値が入っている行の次
 function nextRow_(sh) {
   const last = sh.getLastRow();
@@ -101,6 +121,23 @@ function doPost(e) {
       const rows = last < 2 ? [] : sh.getRange(2, 1, last - 1, 7).getDisplayValues()
         .filter(r => r[6] !== '');
       return out_({ ok: true, rows: rows });
+    }
+
+    if (req.action === 'weight_upsert') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(req.date))) return out_({ ok: false, error: 'bad date' });
+      const ws = weightSheet_();
+      const wr = findWeightRow_(ws, req.date);
+      if (req.kg == null) { if (wr) ws.deleteRow(wr); return out_({ ok: true }); }
+      const target = wr || ws.getLastRow() + 1;
+      ws.getRange(target, 1).setNumberFormat('@');
+      ws.getRange(target, 1, 1, 2).setValues([[String(req.date), Number(req.kg)]]);
+      return out_({ ok: true });
+    }
+
+    if (req.action === 'weight_list') {
+      const ws = weightSheet_();
+      const last = ws.getLastRow();
+      return out_({ ok: true, rows: last < 2 ? [] : ws.getRange(2, 1, last - 1, 2).getDisplayValues() });
     }
 
     const r = findRow_(sh, req.id);
