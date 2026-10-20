@@ -60,7 +60,8 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   （`{日付: {kcal, target, ok, at}}`）。確定後に記録が変わると再確定を促す。
 - **ドーパミン演出**：`settings.dopamine`（設定のトグル、「演出を試す」で確認）。ONで目安以内に確定すると `kakutei()` が
   虹色の『健康確定！！！』を1文字ずつ出す（集中線・虹の放射・星・閃光2回・揺れ）。閃光は2回までにしている（点滅しすぎない）。
-  効果音は `fxSound()` で Web Audio 合成（音声ファイルなし）。`navigator.audioSession.type = "ambient"` で iPhone の消音スイッチに従う。
+  効果音は `fxSound()` → `buildPachinko()` で Web Audio 合成（音声ファイルなし）：キュインキュイン → 1文字ごとにドンッ＋ジャキーン（裏で8bitアルペジオ）
+  → ギュイーン → クラッシュ＋歪ませた金管のパパパパーン → トレモロの和音と鈴。最後にコンプレッサーで潰して割れないようにしている。`navigator.audioSession.type = "ambient"` で iPhone の消音スイッチに従う。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。
