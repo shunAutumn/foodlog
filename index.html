@@ -234,13 +234,6 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .plan .warn{color:var(--label); font-size:.82rem; margin-top:4px}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
-.cmp{display:grid; gap:10px; margin-top:12px}
-.cmpcard{background:var(--surface); border-radius:18px; padding:12px 14px}
-.cmpcard .btn{margin-top:10px; padding:12px; background:var(--accent-soft); color:var(--accent)}
-.cmphead{font-weight:800; margin-bottom:6px}
-.cmpline{font-size:.88rem; line-height:1.6}
-.cmpline.muted{color:var(--muted); font-size:.8rem}
-.cmptotal{font-weight:800; margin-top:4px}
 .photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
 .status{display:flex; gap:10px; align-items:center; margin:14px 4px 0; font-weight:700; font-size:.92rem}
 .status.err{color:var(--danger)}
@@ -392,9 +385,8 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <input type="file" id="file2" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
     <div id="mRead" hidden>
       <button class="btn primary" id="mReadGo" type="button">読み取る</button>
-      <button class="btn plain" id="mReadCmp" type="button">Haiku と Sonnet で比べる（テスト）</button>
+      <button class="btn plain" id="mReadAlt" type="button">読み取る</button>
     </div>
-    <div class="cmp" id="mCmp" hidden></div>
     <div class="status" id="mStatus"></div>
     <p class="memo" id="mMemo"></p>
 
@@ -1529,13 +1521,17 @@ $("file").addEventListener("change", async () => {
   showReadBox();
 });
 
-// 写真を読み取る前に確認する（読み取るかどうか・どのモデルで読むかを選ぶ）
+// 写真を読み取る前に確認する（読み取るかどうか・SonnetとHaikuのどちらで読むかを選ぶ）
+// 設定で選んでいるモデルを上（緑のボタン）に、もう一方を下に出す
+const otherModel = m => m === "claude-haiku-5-5" ? "claude-sonnet-5-5" : "claude-haiku-5-5";
+const readLabel = m => `${PRICES[m].label}で読み取る（1回 約${m === "claude-haiku-5-5" ? "0.1" : "1.7"}円）`;
 function showReadBox(){
   const can = !!(draft && draft._photo && settings.key);
-  $("mRead").hidden = !can; $("mCmp").hidden = true; $("mCmp").textContent = "";
-  $("mReadGo").textContent = `${(PRICES[settings.model] || {}).label || ""}で読み取る`;
+  $("mRead").hidden = !can;
+  $("mReadGo").textContent = readLabel(settings.model);
+  $("mReadAlt").textContent = readLabel(otherModel(settings.model));
   if (draft && draft._photo && !settings.key) setStatus($("mStatus"), "APIキーが未設定なので、手で入力してください。");
-  else if (can) setStatus($("mStatus"), "写真を確認して、読み取るか、下に手で入力してください。");
+  else if (can) setStatus($("mStatus"), "写真を確認して、読み取るモデルを選ぶか、下に手で入力してください。");
 }
 const filled = () => draft.items.some(i => (i.name || "").trim() || i.kcal > 0);
 const mapItems = r => Array.isArray(r.items) ? r.items.map(i => withBase({
@@ -1553,59 +1549,23 @@ function useResult(res){
   renderItems();
 }
 const readErr = e => e instanceof SyntaxError ? "うまく読み取れませんでした。手で入力してください。" : apiErrorText(e);
-$("mReadGo").addEventListener("click", async () => {
+async function readWith(model){
   if (!draft || (filled() && !confirm("入力した内容を、読み取った結果で置き換えます。よろしいですか？"))) return;
   const mine = draft;
   $("mRead").hidden = true;
-  setStatus($("mStatus"), "写真を読み取っています", "busy");
+  setStatus($("mStatus"), `${PRICES[model].label}で写真を読み取っています`, "busy");
   ctl = new AbortController();
   try {
-    const res = await askClaude(mine._photo, ctl.signal);
+    const res = await askClaude(mine._photo, ctl.signal, model);
     if (draft === mine) useResult(res);
   } catch (e){
     if (draft !== mine) return;
     const msg = readErr(e); if (msg) setStatus($("mStatus"), msg, "err");
     $("mRead").hidden = false;
   } finally { ctl = null; }
-});
-// テスト用：HaikuとSonnetに同じ写真を読ませて、結果を並べる
-$("mReadCmp").addEventListener("click", async () => {
-  if (!draft) return;
-  const mine = draft, box = $("mCmp");
-  $("mRead").hidden = true; box.hidden = false; box.textContent = "";
-  setStatus($("mStatus"), "HaikuとSonnetで読み取っています", "busy");
-  ctl = new AbortController();
-  const models = ["claude-haiku-5-5", "claude-sonnet-5-5"];
-  const cards = models.map(m => { const c = el("div", "cmpcard"); c.append(el("div", "cmphead", `${PRICES[m].label}：読み取り中…`)); box.append(c); return c; });
-  let done = 0;
-  await Promise.all(models.map(async (m, i) => {
-    const c = cards[i];
-    try {
-      const res = await askClaude(mine._photo, ctl.signal, m);
-      if (draft !== mine) return;
-      const items = mapItems(res.r);
-      c.textContent = "";
-      c.append(el("div", "cmphead num", `${PRICES[m].label}・${(res.ms / 1000).toFixed(1)}秒・約${yen(res.cost)}円`));
-      for (const it of items) c.append(el("div", "cmpline num", `${it.name}　${it.g ? it.g + "g　" : ""}${fmt(it.kcal)}kcal`));
-      if (!items.length) c.append(el("div", "cmpline", "食べ物が見つかりませんでした"));
-      c.append(el("div", "cmptotal num", `合計 ${fmt(sum(items))} kcal`));
-      const nl = nutLine(items); if (nl) c.append(el("div", "cmpline muted num", nl));
-      if (res.r.comment) c.append(el("div", "cmpline muted", String(res.r.comment).slice(0, 120)));
-      const use = el("button", "btn plain", "この結果を使う"); use.type = "button";
-      use.addEventListener("click", () => {
-        if (filled() && !confirm("入力した内容を、この結果で置き換えます。よろしいですか？")) return;
-        useResult(res); box.hidden = true;
-      });
-      c.append(use);
-    } catch (e){
-      if (draft !== mine) return;
-      c.textContent = ""; c.append(el("div", "cmphead", `${PRICES[m].label}`), el("div", "cmpline", readErr(e) || "読み取りをやめました"));
-    } finally {
-      if (draft === mine && ++done === models.length) setStatus($("mStatus"), "結果を比べて、使うほうを選んでください。");
-    }
-  }));
-  ctl = null;
-});
+}
+$("mReadGo").addEventListener("click", () => readWith(settings.model));
+$("mReadAlt").addEventListener("click", () => readWith(otherModel(settings.model)));
 
 $("mSave").addEventListener("click", async () => {
   if (!draft) return;

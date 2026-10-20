@@ -16,7 +16,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   （`anthropic-dangerous-direct-browser-access: true`）。モデルは設定で選択
   （`claude-sonnet-5-5` / `claude-haiku-5-5`）。返答はJSON `{items:[{name,g,kcal,p,f,c,sugar,source}],comment}`（p/f/c/sugar はたんぱく質・脂質・炭水化物・糖質のg。アプリ内では sugar を s で持つ）。
   `source` は `"label"`（パッケージ等の表示から読んだ）か `"estimate"`（推定）。手で直すと `"manual"`。
-- **読み取る前の確認**：写真を選んでもすぐには送らない。編集画面の「◯◯で読み取る」か「Haiku と Sonnet で比べる（テスト）」を押したときだけ `askClaude(写真, signal, model)` を呼ぶ。比べるときは両方の結果を並べ、使うほうを選ぶ。あとから付けた写真も読み取れる。`max_tokens` は考える過程を含めて 4096。
+- **読み取る前の確認**：写真を選んでもすぐには送らない。編集画面の「Sonnetで読み取る」「Haikuで読み取る」を押したときだけ `readWith(model)` → `askClaude(写真, signal, model)` を呼ぶ。設定のモデルを上（緑）、もう一方を下に出す。あとから付けた写真も読み取れる。`max_tokens` は考える過程を含めて 4096。
 - **API使用量**：返事の `usage` を localStorage `foodlog.usage`（`{"yyyy-MM": {model: {n, in, out}}}`）に足し、設定画面に今月・先月の合計を出す。料金は `PRICES`（$/100万トークン）、1ドル＝150円で換算。
 - **食事の区分**：`cat`（朝食・昼食・夕食・間食）。新しい記録は時刻から自動（自分で選んだら固定）、以前の記録は `mealCat()` で時刻から決める。区分ごとに1食と数え、一覧も区分ごとに分ける。シートのC列の先頭に `［朝食］` を付け、読み込み時に外す。
 - **手入力**：下の「手入力」ボタン。写真なし・AIなしで同じ編集画面を開く。
