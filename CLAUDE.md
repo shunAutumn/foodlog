@@ -49,7 +49,8 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   `weight_upsert`（kg が null なら削除）/ `weight_list`。送信は記録と同じ `foodlog.queue`（id は `w:日付`）。
 - **顔・体の記録**：体重カードの下のカード。IndexedDB（DBバージョン5）の `bodyphotos`（`{id, kind:"face"|"body", date, thumb(360px), savedAt}`）と
   `bodyimgs`（`{id, data}` 長辺1280px）。同じ日・同じ種類は1枚（置き換え）。サムネイルを横スクロールで日付順、タップで全画面（スクロールスナップで左右に移動、`bpAt` で今の番号を持つ）。
-  写真はスマホの中だけ：スプレッドシート・ドライブ・引っ越しの対象外。
+  写真はドライブの「たべたもの記録の顔・体」にも送る（`foodlog.photoq` に type:"body" で積み、`body_put`／削除は `body_delete`、スマホの写真は残す）。
+  ファイル名は「yyyy-MM-dd 顔|体 記録ID.jpg」で、`body_list`／`body_get` で読み込み時に戻す。既存の写真は `foodlog.oldBodySent` で一度だけ送る。引っ越しの対象外。
 - **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から
   ミフリン・セントジョー式で基礎代謝 → ×活動係数で TDEE → 目標に向けて ペース×7200/7 kcal を増減。基礎代謝は下回らない。
 - **タブ**：ヘッダーの「食事／筋トレ」（`setTab()`、localStorage `foodlog.tab`）。下のボタンもタブに合わせて切り替える。

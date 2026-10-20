@@ -31,24 +31,27 @@ function findRow_(sh, id) {
 // 写真はドライブの「たべたもの記録の写真」フォルダに、ファイル名の末尾を記録IDにして保存する。
 // DriveApp はドライブ全体の権限を求めるので、このスクリプトが作ったファイルだけを扱える
 // Drive API（拡張サービス、drive.file 権限）を使う。
-function photoFolder_() {
+function folder_(key, name) {
   const props = PropertiesService.getScriptProperties();
-  const id = props.getProperty('PHOTO_FOLDER');
+  const id = props.getProperty(key);
   if (id) {
     try {
       if (!Drive.Files.get(id, { fields: 'trashed' }).trashed) return id;
     } catch (err) {}
   }
-  const f = Drive.Files.create({ name: 'たべたもの記録の写真', mimeType: 'application/vnd.google-apps.folder' });
-  props.setProperty('PHOTO_FOLDER', f.id);
+  const f = Drive.Files.create({ name: name, mimeType: 'application/vnd.google-apps.folder' });
+  props.setProperty(key, f.id);
   return f.id;
 }
+function photoFolder_() { return folder_('PHOTO_FOLDER', 'たべたもの記録の写真'); }
+// 顔・体の写真は別のフォルダ。ファイル名は「yyyy-MM-dd 顔 記録ID.jpg」
+function bodyFolder_() { return folder_('BODY_FOLDER', 'たべたもの記録の顔・体'); }
 
 // 見つかればファイルID、なければ null
-function findPhoto_(id) {
+function findPhoto_(id, folderId) {
   if (!/^[0-9a-z]+$/i.test(String(id))) return null;
   const res = Drive.Files.list({
-    q: `'${photoFolder_()}' in parents and name contains '${id}' and trashed = false`,
+    q: `'${folderId || photoFolder_()}' in parents and name contains '${id}' and trashed = false`,
     fields: 'files(id)', pageSize: 1
   });
   return res.files && res.files.length ? res.files[0].id : null;
@@ -202,6 +205,42 @@ function doPost(e) {
       Drive.Files.create({ name: name, parents: [photoFolder_()], mimeType: 'image/jpeg' },
         Utilities.newBlob(Utilities.base64Decode(req.data), 'image/jpeg', name));
       return out_({ ok: true });
+    }
+
+    if (req.action === 'body_put') {
+      const bid = String(req.bid || ''), kind = req.kind === 'body' ? '体' : '顔';
+      if (!/^[0-9a-z]+$/i.test(bid) || !/^\d{4}-\d{2}-\d{2}$/.test(String(req.date))) return out_({ ok: false, error: 'bad id' });
+      const folder = bodyFolder_(), old = findPhoto_(bid, folder);
+      if (old) trashPhoto_(old);
+      const name = `${req.date} ${kind} ${bid}.jpg`;
+      Drive.Files.create({ name: name, parents: [folder], mimeType: 'image/jpeg' },
+        Utilities.newBlob(Utilities.base64Decode(req.data), 'image/jpeg', name));
+      return out_({ ok: true });
+    }
+
+    if (req.action === 'body_delete') {
+      const p = findPhoto_(String(req.bid || ''), bodyFolder_());
+      if (p) trashPhoto_(p);
+      return out_({ ok: true });
+    }
+
+    if (req.action === 'body_list') {
+      const files = [];
+      let token = null;
+      do {
+        const res = Drive.Files.list({ q: `'${bodyFolder_()}' in parents and trashed = false`, fields: 'nextPageToken, files(name)', pageSize: 1000, pageToken: token });
+        for (const f of res.files || []) {
+          const m = String(f.name).match(/^(\d{4}-\d{2}-\d{2}) (顔|体) ([0-9a-z]+)\.jpg$/i);
+          if (m) files.push({ id: m[3], kind: m[2] === '体' ? 'body' : 'face', date: m[1] });
+        }
+        token = res.nextPageToken;
+      } while (token);
+      return out_({ ok: true, files: files });
+    }
+
+    if (req.action === 'body_get') {
+      const p = findPhoto_(String(req.bid || ''), bodyFolder_());
+      return out_({ ok: true, data: p ? Utilities.base64Encode(photoBytes_(p)) : null });
     }
 
     if (req.action === 'photo_get') {
