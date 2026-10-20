@@ -260,6 +260,59 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .fx-spark{position:absolute; pointer-events:none; text-shadow:0 0 8px currentColor, 0 0 16px #fff; animation:fx-twinkle 1s ease-in-out infinite alternate}
 .fx-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; animation:fx-flash .5s ease-out forwards}
 .fx-stage.shake{animation:fx-shake .5s ease-in-out}
+/* 新しい演出のフェーズ */
+#fx.fx-dark{background:radial-gradient(circle at 50% 45%, #1a0b2e 0%, #050308 70%)}
+#fx.fx-freeze{background:#000 !important}
+#fx.fx-freeze > *{visibility:hidden}
+.fx-skip{position:absolute; top:calc(env(safe-area-inset-top) + 10px); right:12px; z-index:3; color:rgba(255,255,255,.6); font-size:.8rem; font-weight:700; padding:8px 12px; cursor:pointer}
+.fx-orb{width:150px; height:150px; border-radius:50%; margin:0 auto; background:#333; box-shadow:0 0 30px currentColor, inset 0 -12px 30px rgba(0,0,0,.35), inset 0 10px 20px rgba(255,255,255,.35)}
+.fx-orb.pop{animation:fx-orbpop .5s cubic-bezier(.2,1.6,.4,1)}
+.fx-orb.c-blue{background:radial-gradient(circle at 35% 30%, #9cc7ff, #1f5fd6 60%, #0c2f73); color:#3d8bff}
+.fx-orb.c-green{background:radial-gradient(circle at 35% 30%, #b6ffc9, #19b54a 60%, #0a5a24); color:#2bff6a}
+.fx-orb.c-red{background:radial-gradient(circle at 35% 30%, #ffb3b3, #e01e1e 60%, #6e0808); color:#ff3b3b}
+.fx-orb.c-gold{background:radial-gradient(circle at 35% 30%, #fff6c8, #f5b800 55%, #8a5a00); color:#ffd000; box-shadow:0 0 60px #ffd000, 0 0 120px #ff9d00}
+.fx-orb.c-rainbow{background:conic-gradient(#ff004c, #ff8a00, #ffe600, #3dff4e, #00e1ff, #4d5bff, #d400ff, #ff004c); color:#fff; animation:fx-spin 1s linear infinite, fx-orbpop .5s cubic-bezier(.2,1.6,.4,1); box-shadow:0 0 70px #fff, 0 0 140px #ff00d4}
+.fx-yokoku{margin-top:22px; font-size:2rem; font-weight:900; color:#fff; letter-spacing:.05em; min-height:1.3em; text-shadow:0 0 12px currentColor}
+.fx-yokoku.c-blue{color:#7fb2ff} .fx-yokoku.c-green{color:#6bff95} .fx-yokoku.c-red{color:#ff6b6b; font-size:2.4rem}
+.fx-yokoku.c-gold{color:#ffd84a; font-size:2.8rem} .fx-yokoku.c-rainbow{color:#fff; font-size:3rem; animation:fx-rainbowtext .4s linear infinite}
+.fx-push{display:block; margin:26px auto 0; border:0; border-radius:28px; padding:22px 44px; font:inherit; font-size:2.2rem; font-weight:900; letter-spacing:.06em; color:#fff; cursor:pointer;
+  background:linear-gradient(180deg, #ff5f5f, #b40000); box-shadow:0 8px 0 #5a0000, 0 0 40px #ff2a2a; animation:fx-pushpulse .5s ease-in-out infinite alternate}
+.fx-push.c-blue{background:linear-gradient(180deg, #6fa8ff, #1446b0); box-shadow:0 8px 0 #0a2560, 0 0 40px #3d8bff}
+.fx-push.c-green{background:linear-gradient(180deg, #5bea86, #10862f); box-shadow:0 8px 0 #064018, 0 0 40px #2bff6a}
+.fx-push.c-gold{background:linear-gradient(180deg, #ffe680, #d99a00); color:#3b2600; box-shadow:0 8px 0 #6b4a00, 0 0 60px #ffd000}
+.fx-push.c-rainbow{background:linear-gradient(90deg, #ff004c, #ff8a00, #ffe600, #3dff4e, #00e1ff, #4d5bff, #d400ff); background-size:300% 100%; animation:fx-pushpulse .4s ease-in-out infinite alternate, fx-rainbow 1s linear infinite; box-shadow:0 8px 0 #333, 0 0 60px #fff}
+.fx-push:active{transform:translateY(6px); box-shadow:0 2px 0 #000}
+.fx-reels{display:flex; gap:10px; justify-content:center}
+.fx-reels .reel{width:92px; height:92px; overflow:hidden; border-radius:16px; background:linear-gradient(180deg, #111 0%, #2a2a2a 50%, #111 100%); box-shadow:inset 0 0 0 3px #ffd000, 0 0 18px rgba(255,208,0,.5)}
+.fx-reels .strip.spinning{animation:fx-reelspin .22s linear infinite; filter:blur(1.5px)}
+.fx-reels .strip{transition:transform .35s cubic-bezier(.2,1.5,.4,1)}
+.fx-reels .cell{height:92px; display:grid; place-items:center; font-size:58px}
+.fx-reels.win .reel{animation:fx-winglow .25s ease-in-out infinite alternate}
+.fx-reach{margin-top:18px; font-size:2.2rem; font-weight:900; color:#ffd84a; opacity:0; text-shadow:0 0 14px #ff8a00}
+.fx-reach.on{opacity:1; animation:fx-reachpulse .3s ease-in-out infinite alternate}
+.fx-lamp{width:220px; height:220px; margin:0 auto; border-radius:50%; display:grid; place-items:center; background:radial-gradient(circle, #fff 0%, #ff4fd8 35%, #7a00ff 70%, transparent 72%);
+  box-shadow:0 0 80px #ff4fd8, 0 0 160px #7a00ff; animation:fx-lamp .18s ease-in-out infinite alternate}
+.fx-lamp span{font-size:3rem; font-weight:900; color:#fff; text-shadow:0 0 12px #ff00c8}
+.fx-stamp{display:inline-block; margin-bottom:14px; padding:6px 18px; border-radius:10px; font-weight:900; font-size:1.4rem; letter-spacing:.1em; transform:rotate(-6deg);
+  background:linear-gradient(180deg, #fff3b0, #f5b800); color:#5a3a00; box-shadow:0 0 30px #ffd000; animation:fx-pop .5s cubic-bezier(.2,1.6,.4,1) both}
+.tier-premier .fx-stamp{background:linear-gradient(90deg, #ff004c, #ffe600, #00e1ff, #d400ff); color:#fff; text-shadow:0 0 6px #000}
+.fx-streak{margin-top:12px; font-size:1.3rem; font-weight:900; color:#ffb347; text-shadow:0 0 10px #ff6a00; opacity:0; animation:fx-up .5s ease-out forwards}
+/* 激アツ：金、プレミア：色がめぐる */
+.tier-geki .fx-rays{background:repeating-conic-gradient(from 0deg, #ffd000 0 8deg, #ff8a00 8deg 16deg, #fff4b0 16deg 24deg, #b37400 24deg 32deg)}
+.tier-geki .fx-text span{background:linear-gradient(90deg, #fff7c2, #ffd000, #ff9d00, #fff7c2); background-size:300% 100%; -webkit-background-clip:text; background-clip:text}
+#fx.tier-premier{animation:fx-hue 2s linear infinite}
+.tier-premier .fx-text{font-size:min(14vw, 112px)}
+.fxtry{display:flex; gap:6px; margin:8px 6px 0}
+.fxtry button{flex:1; border:0; border-radius:12px; padding:9px 0; font:inherit; font-size:.8rem; font-weight:800; background:var(--surface); color:var(--ink); cursor:pointer}
+.fxtry button[data-fxtry=geki]{color:#c98a00} .fxtry button[data-fxtry=premier]{color:#b100c8}
+@keyframes fx-orbpop{0%{transform:scale(.4)} 70%{transform:scale(1.15)} 100%{transform:scale(1)}}
+@keyframes fx-rainbowtext{0%{color:#ff4d6d} 33%{color:#ffe600} 66%{color:#3dd9ff} 100%{color:#ff4d6d}}
+@keyframes fx-pushpulse{from{transform:scale(1)} to{transform:scale(1.08)}}
+@keyframes fx-reelspin{from{transform:translateY(0)} to{transform:translateY(-644px)}}
+@keyframes fx-winglow{from{box-shadow:inset 0 0 0 3px #ffd000, 0 0 18px #ffd000} to{box-shadow:inset 0 0 0 3px #fff, 0 0 40px #fff, 0 0 70px #ffd000}}
+@keyframes fx-reachpulse{from{transform:scale(1)} to{transform:scale(1.12)}}
+@keyframes fx-lamp{from{filter:brightness(1)} to{filter:brightness(1.6)}}
+@keyframes fx-hue{to{filter:hue-rotate(360deg)}}
 @keyframes fx-spin{to{transform:rotate(360deg)}}
 @keyframes fx-in{from{opacity:0}}
 @keyframes fx-lines{50%{transform:rotate(1.5deg) scale(1.03)}}
@@ -733,6 +786,8 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
       <div class="row"><label for="sDopa">ドーパミン中毒のガキ向け演出</label><input type="checkbox" id="sDopa" class="switch" role="switch"></div>
     </div>
     <p class="help">ONにすると、目安カロリー以内で「確定」したときに派手な演出が出ます。効果音はマナーモードでないときだけ鳴ります。<button type="button" class="linkbtn" id="sDopaTry">演出を試す</button></p>
+    <div class="fxtry"><button type="button" data-fxtry="normal">通常を見る</button><button type="button" data-fxtry="geki">激アツを見る</button><button type="button" data-fxtry="premier">プレミアを見る</button></div>
+    <p class="help">流れ：暗転 → 予告（青→緑→赤→金→虹）→ PUSH!! → リール → 健康確定！！！。当たりは 通常・激アツ・プレミアのどれかがランダムで出ます（目安以内の確定が続くほど、上が出やすくなります）。</p>
 
 
       </div>
@@ -2226,39 +2281,6 @@ function renderClose(){
 }
 
 /* ---------- ドーパミン演出：健康確定！！！ ---------- */
-function kakutei(kcal, target){
-  const fx = $("fx"); fx.textContent = ""; fx.hidden = false;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const add = (cls, parent = fx) => { const e = el("div", cls); parent.append(e); return e; };
-  add("fx-rays"); add("fx-lines");
-  const stage = add("fx-stage");
-  const text = add("fx-text", stage);
-  const chars = [..."健康確定！！！"], step = reduce ? 0.12 : 0.32, last = 0.6 + chars.length * step;
-  chars.forEach((ch, i) => { const s = el("span", null, ch); s.style.animationDelay = `${0.6 + i * step}s, 0s`; text.append(s); });
-  const sub = add("fx-sub num", stage); sub.textContent = `${fmt(kcal)} / ${fmt(target)} kcal`;
-  sub.style.animationDelay = `${last + 0.3}s`;
-  const hint = add("fx-hint", stage); hint.textContent = "タップで閉じる";
-  hint.style.animationDelay = `${last + 1}s`;
-  // ギラギラ（ランダムな星）
-  for (let i = 0; i < (reduce ? 0 : 46); i++){
-    const s = el("span", "fx-spark", i % 3 ? "✦" : "★");
-    s.style.left = `${Math.random() * 100}%`; s.style.top = `${Math.random() * 100}%`;
-    s.style.fontSize = `${10 + Math.random() * 26}px`; s.style.color = `hsl(${Math.random() * 360},100%,70%)`;
-    s.style.animationDelay = `${Math.random() * 1.6}s`; s.style.animationDuration = `${0.6 + Math.random() * 0.9}s`;
-    fx.append(s);
-  }
-  // 白い閃光：最初と、全部出たときの2回だけ（点滅しすぎないように）
-  if (!reduce){
-    const f1 = add("fx-flash"); f1.style.animationDelay = "0.45s";
-    const f2 = add("fx-flash"); f2.style.animationDelay = `${last}s`;
-    stage.style.animationDelay = `${last - step}s`; stage.classList.add("shake");
-  }
-  fxSound(chars.length, step);
-  const close = () => { fx.hidden = true; fx.textContent = ""; clearTimeout(timer); };
-  const timer = setTimeout(close, (last + 4.5) * 1000);
-  fx.onclick = close;
-}
-
 // 効果音：合成音（キュイン！）＋効果音ラボの音源（sfx/）。iPhoneではマナーモード（消音スイッチ）中は鳴らない
 const SFX = ["machdash1", "drum-japanese1", "metal-logo1", "air-horn1", "trumpet1", "mens-yeah1", "shine4"];
 let actx = null, sfxBufs = null, sfxLoading = null;
@@ -2272,11 +2294,6 @@ function loadSfx(ctx = audioCtx()){
   return sfxLoading || (sfxLoading = Promise.all(SFX.map(async n => {
     try { return [n, await ctx.decodeAudioData(await (await fetch(`sfx/${n}.mp3`)).arrayBuffer())]; } catch { return [n, null]; }
   })).then(list => (sfxBufs = Object.fromEntries(list))));
-}
-function fxSound(n, step){
-  let ctx;
-  try { ctx = audioCtx(); if (ctx.state === "suspended") ctx.resume(); } catch { return; }
-  buildPachinko(ctx, ctx.destination, ctx.currentTime + 0.05, n, step, loadSfx(ctx));
 }
 // パチンコの確定演出ふう：キュイン！ → ギューン → 1文字ごとにドン → ガキーン → キュインキュインキュイン＋プァーッ＋ファンファーレ＋イエーイ＋しゃらーん
 function buildPachinko(ctx, dest, t0, n, step, samples){
@@ -2334,8 +2351,193 @@ function buildPachinko(ctx, dest, t0, n, step, samples){
     }
   });
 }
+/* ---------- ドーパミン演出：暗転 → 予告 → PUSH → リール → （フリーズ → ペカッ）→ 健康確定！！！ ---------- */
+// 当たりの大きさ：通常・激アツ・プレミア。連チャン（目安以内の確定が続いた日数）が多いほど上が出やすい
+const TIERS = { normal:"通常", geki:"激アツ", premier:"プレミア" };
+function okStreak(){
+  const c = readClosed(); let n = 0;
+  for (let d = new Date(); ; d.setDate(d.getDate() - 1)){ const v = c[dayKey(d.getTime())]; if (!v || !v.ok) break; n++; if (n > 999) break; }
+  return n;
+}
+function pickTier(streak){
+  const bonus = Math.max(0, streak - 1);
+  const prem = 0.05 + Math.min(0.10, bonus * 0.01), geki = 0.20 + Math.min(0.15, bonus * 0.02), r = Math.random();
+  return r < prem ? "premier" : r < prem + geki ? "geki" : "normal";
+}
+// 演出用の音（フェーズごと）。out を絞ればまとめて止められる
+function fxKit(){
+  let ctx;
+  try { ctx = audioCtx(); if (ctx.state === "suspended") ctx.resume(); } catch { return null; }
+  // どのフェーズの音も最後に1つのリミッターを通して、重なっても割れないようにする
+  if (!ctx.__limiter){ const l = ctx.createDynamicsCompressor(); l.threshold.value = -6; l.knee.value = 0; l.ratio.value = 20; l.attack.value = 0.001; l.release.value = 0.1; const g = ctx.createGain(); g.gain.value = 0.85; l.connect(g); g.connect(ctx.destination); ctx.__limiter = l; }
+  const out = ctx.createGain(); out.gain.value = 1; out.connect(ctx.__limiter);
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 10; comp.attack.value = 0.003; comp.release.value = 0.2;
+  const master = ctx.createGain(); master.gain.value = 0.85; master.connect(comp); comp.connect(out);
+  const rate = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(rate * 2), rate);
+  for (let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+  const verb = ctx.createConvolver(); verb.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.45; verb.connect(wet); wet.connect(master);
+  const bus = ctx.createGain(); bus.connect(master); bus.connect(verb);
+  const noise = ctx.createBuffer(1, rate, rate), nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const now = () => ctx.currentTime + 0.02;
+  const env = (g, at, vol, a, d) => { g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + a); g.gain.exponentialRampToValueAtTime(0.0001, at + a + d); };
+  const osc = (type, f0, f1, at, dur, vol, dest = bus) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type;
+    o.frequency.setValueAtTime(f0, at); if (f1) o.frequency.exponentialRampToValueAtTime(f1, at + dur);
+    env(g, at, vol, 0.005, dur); o.connect(g); g.connect(dest); o.start(at); o.stop(at + dur + 0.1); return o;
+  };
+  const hiss = (at, dur, vol, type, freq) => {
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noise; s.loop = true;
+    f.type = type; f.frequency.value = freq; env(g, at, vol, 0.003, dur); s.connect(f); f.connect(g); g.connect(bus); s.start(at); s.stop(at + dur + 0.1);
+  };
+  const kyuin = (at, vol = 0.5, base = 1000) => {
+    const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), vib = ctx.createOscillator(), vg = ctx.createGain();
+    car.type = "square"; car.frequency.setValueAtTime(base, at); car.frequency.exponentialRampToValueAtTime(base * 3.6, at + 0.09);
+    mod.frequency.setValueAtTime(base * 1.5, at); mod.frequency.exponentialRampToValueAtTime(base * 5.4, at + 0.09);
+    mg.gain.setValueAtTime(base * 2, at); mg.gain.exponentialRampToValueAtTime(base * 0.4, at + 0.4);
+    vib.frequency.value = 22; vg.gain.value = base * 0.12;
+    mod.connect(mg); mg.connect(car.frequency); vib.connect(vg); vg.connect(car.frequency);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.012); g.gain.setValueAtTime(vol, at + 0.16); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.55);
+    car.connect(g); g.connect(bus); for (const o of [car, mod, vib]){ o.start(at); o.stop(at + 0.6); }
+  };
+  const sample = (name, at, vol = 0.9) => {
+    const b = sfxBufs && sfxBufs[name]; if (!b) return;
+    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; g.gain.value = vol; s.connect(g); g.connect(master); s.start(at);
+  };
+  return {
+    ctx, out,
+    stop(){ try { out.gain.setTargetAtTime(0, ctx.currentTime, 0.04); setTimeout(() => out.disconnect(), 400); } catch {} },
+    thud(at = now()){ osc("sine", 140, 38, at, 0.5, 1); hiss(at, 0.12, 0.4, "lowpass", 600); },
+    // 予告：段階が上がるほど高く、明るく
+    chime(step, at = now()){ const f = 440 * Math.pow(2, step * 4 / 12); osc("triangle", f, 0, at, 0.7, 0.45); osc("sine", f * 2, 0, at, 0.5, 0.2); osc("square", f * 4, 0, at, 0.08, 0.06); },
+    gold(at = now()){ [880, 1109, 1319, 1760].forEach((f, i) => osc("triangle", f, 0, at + i * 0.05, 1.2, 0.3)); hiss(at, 1, 0.2, "highpass", 6000); sample("metal-logo1", at, 0.7); },
+    rainbow(at = now()){ kyuin(at, 0.6, 1100); kyuin(at + 0.14, 0.5, 1300); kyuin(at + 0.28, 0.5, 1500); },
+    // PUSH待ち：ワウワウ揺れる音をボタンが押されるまで
+    pending(){ const at = now(), o = ctx.createOscillator(), l = ctx.createOscillator(), lg = ctx.createGain(), g = ctx.createGain();
+      o.type = "sawtooth"; o.frequency.value = 220; l.frequency.value = 7; lg.gain.value = 30; l.connect(lg); lg.connect(o.frequency);
+      const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 1200;
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.12, at + 0.3);
+      o.connect(f); f.connect(g); g.connect(bus); o.start(at); l.start(at);
+      return () => { const t = ctx.currentTime; g.gain.setTargetAtTime(0.0001, t, 0.03); o.stop(t + 0.2); l.stop(t + 0.2); }; },
+    push(at = now()){ osc("sine", 180, 36, at, 0.6, 1); hiss(at, 0.9, 0.5, "highpass", 4000); kyuin(at + 0.02, 0.55); sample("drum-japanese1", at, 1); },
+    // リール：回っている間カチカチ、止めるとガチッ
+    spin(from, to){ for (let t = from; t < to; t += 0.055) osc("square", 1900 + Math.random() * 300, 0, t, 0.02, 0.05); },
+    stopReel(at, i){ osc("square", 900, 0, at, 0.06, 0.25); osc("sine", 160, 60, at, 0.18, 0.7); osc("triangle", 660 * Math.pow(2, i * 5 / 12), 0, at + 0.03, 0.4, 0.3); },
+    reach(at = now(), dur = 1.4){ for (const d of [-12, 0, 12]){ const o = osc("sawtooth", 330, 1320, at, dur, 0.12); o.detune.value = d; } hiss(at, dur, 0.12, "bandpass", 3000); },
+    // ペカッ：ランプが光る音
+    peka(at = now()){ osc("square", 2600, 3900, at, 0.09, 0.4); osc("sine", 3900, 0, at + 0.08, 1.4, 0.2); kyuin(at + 0.05, 0.5, 1500); }
+  };
+}
+
+let fxRun = 0;
+async function kakutei(kcal, target, forceTier){
+  const run = ++fxRun, fx = $("fx");
+  fx.textContent = ""; fx.className = "fx-dark"; fx.hidden = false; fx.onclick = null;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const streak = okStreak(), tier = forceTier || pickTier(streak);
+  try { loadSfx(); } catch {}
+  let kit = fxKit(), skipped = false, wake = null;
+  const alive = () => fxRun === run && !fx.hidden;
+  const sleep = ms => new Promise(r => { if (skipped) return r(); const t = setTimeout(r, reduce ? ms * 0.5 : ms); wake = () => { clearTimeout(t); r(); }; });
+  const add = (cls, parent = fx, text) => { const e = el("div", cls, text); parent.append(e); return e; };
+  const flash = () => { if (!reduce){ const f = add("fx-flash"); setTimeout(() => f.remove(), 600); } };
+  const skip = add("fx-skip", fx, "スキップ ›");
+  skip.addEventListener("click", e => { e.stopPropagation(); skipped = true; kit && kit.stop(); wake && wake(); });
+  const stage = add("fx-stage");
+
+  // 1) 暗転 → 2) 予告：保留玉の色が上がっていく
+  kit && kit.thud();
+  await sleep(550); if (!alive()) return;
+  const steps = tier === "premier" ? ["blue", "green", "red", "gold", "rainbow"] : tier === "geki" ? ["blue", "green", "red", "gold"] : ["blue", "green", "red"].slice(0, 2 + (Math.random() < 0.6 ? 1 : 0));
+  const LABEL = { blue:"…", green:"チャンス", red:"チャンス！", gold:"激アツ！！", rainbow:"！？！？" };
+  const orb = add("fx-orb", stage), yokoku = add("fx-yokoku", stage);
+  for (const [i, c] of steps.entries()){
+    if (skipped) break;
+    orb.className = `fx-orb c-${c} pop`; yokoku.textContent = LABEL[c]; yokoku.className = `fx-yokoku c-${c}`;
+    if (kit){ if (c === "gold") kit.gold(); else if (c === "rainbow") kit.rainbow(); else kit.chime(i); }
+    await sleep(c === "gold" || c === "rainbow" ? 900 : 560); if (!alive()) return;
+    orb.classList.remove("pop"); void orb.offsetWidth;
+  }
+
+  // 3) PUSH!!：自分で叩く（7秒で自動）
+  if (!skipped){
+    const last = steps[steps.length - 1];
+    const btn = el("button", `fx-push c-${last}`, "PUSH!!"); btn.type = "button"; stage.append(btn);
+    const stopPending = kit ? kit.pending() : () => {};
+    await new Promise(r => { const t = setTimeout(r, 7000); btn.addEventListener("click", e => { e.stopPropagation(); clearTimeout(t); r(); }, { once:true }); wake = () => { clearTimeout(t); r(); }; });
+    stopPending(); if (!alive()) return;
+    if (!skipped){ kit && kit.push(); flash(); stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake"); }
+    orb.remove(); yokoku.remove(); btn.remove();
+  }
+
+  // 4) リール：1つずつ止まって、最後はリーチ → 7・7・7
+  if (!skipped){
+    const SYM = ["🍙", "🥦", "🍗", "7️⃣", "🥚", "🍣", "💪"], H = 92;
+    const reels = add("fx-reels", stage), strips = [];
+    for (let i = 0; i < 3; i++){
+      const w = add("reel", reels), st = add("strip spinning", w);
+      for (let k = 0; k < 3; k++) for (const s of SYM) st.append(el("div", "cell", s));
+      st.style.animationDuration = `${0.22 + i * 0.03}s`; strips.push(st);
+    }
+    const reach = add("fx-reach", stage);
+    const stopAt = (i) => { const st = strips[i]; st.classList.remove("spinning"); st.style.transform = `translateY(${-(SYM.length + SYM.indexOf("7️⃣")) * H}px)`; st.parentElement.classList.add("stopped"); };
+    const t0 = kit ? kit.ctx.currentTime : 0, longReach = tier === "normal" ? 1.2 : 1.8;
+    kit && kit.spin(t0, t0 + 0.75 + 0.45 + longReach);
+    await sleep(750); if (!alive()) return; if (!skipped){ stopAt(0); kit && kit.stopReel(kit.ctx.currentTime + 0.01, 0); }
+    await sleep(450); if (!alive()) return; if (!skipped){ stopAt(1); kit && kit.stopReel(kit.ctx.currentTime + 0.01, 1); reach.textContent = "リーチ！"; reach.classList.add("on"); kit && kit.reach(undefined, longReach); }
+    await sleep(longReach * 1000); if (!alive()) return;
+    if (!skipped){ stopAt(2); kit && kit.stopReel(kit.ctx.currentTime + 0.01, 2); reach.textContent = "7 7 7"; reels.classList.add("win"); }
+    await sleep(700); if (!alive()) return;
+    reels.remove(); reach.remove();
+  }
+
+  // 5) プレミアだけ：フリーズ（無音の暗転）→ ペカッ
+  if (tier === "premier" && !skipped){
+    fx.classList.add("fx-freeze"); kit && kit.stop();
+    await sleep(1300); if (!alive()) return;
+    kit = fxKit(); fx.classList.remove("fx-freeze");
+    const lamp = add("fx-lamp", stage); lamp.append(el("span", null, "ペカッ"));
+    kit && kit.peka();
+    await sleep(1100); if (!alive()) return;
+    lamp.remove();
+  }
+
+  // 6) 健康確定！！！
+  if (skipped){ kit = fxKit(); }
+  finale(fx, stage, kit, kcal, target, tier, streak, reduce);
+}
+
+function finale(fx, stage, kit, kcal, target, tier, streak, reduce){
+  fx.className = `tier-${tier}`; stage.textContent = "";
+  const add = (cls, parent = fx, text) => { const e = el("div", cls, text); parent.append(e); return e; };
+  fx.querySelector(".fx-skip")?.remove();
+  fx.prepend(el("div", "fx-lines")); fx.prepend(el("div", "fx-rays"));
+  if (tier !== "normal") add("fx-stamp", stage, tier === "premier" ? "PREMIUM" : "激アツ");
+  const text = add("fx-text", stage);
+  const chars = [..."健康確定！！！"], step = reduce ? 0.12 : 0.32, last = 0.6 + chars.length * step;
+  chars.forEach((ch, i) => { const s = el("span", null, ch); s.style.animationDelay = `${0.6 + i * step}s, 0s`; text.append(s); });
+  const sub = add("fx-sub num", stage, `${fmt(kcal)} / ${fmt(target)} kcal`); sub.style.animationDelay = `${last + 0.3}s`;
+  if (streak >= 2){ const sk = add("fx-streak", stage, `🔥 ${streak}連チャン中！`); sk.style.animationDelay = `${last + 0.6}s`; }
+  const hint = add("fx-hint", stage, "タップで閉じる"); hint.style.animationDelay = `${last + 1}s`;
+  const n = reduce ? 0 : tier === "premier" ? 90 : tier === "geki" ? 64 : 46;
+  for (let i = 0; i < n; i++){
+    const s = el("span", "fx-spark", tier === "geki" ? (i % 2 ? "✦" : "◆") : i % 3 ? "✦" : "★");
+    s.style.left = `${Math.random() * 100}%`; s.style.top = `${Math.random() * 100}%`;
+    s.style.fontSize = `${10 + Math.random() * (tier === "premier" ? 40 : 26)}px`;
+    s.style.color = tier === "geki" ? `hsl(${40 + Math.random() * 15},100%,${55 + Math.random() * 25}%)` : `hsl(${Math.random() * 360},100%,70%)`;
+    s.style.animationDelay = `${Math.random() * 1.6}s`; s.style.animationDuration = `${0.6 + Math.random() * 0.9}s`;
+    fx.append(s);
+  }
+  if (!reduce){ const f = add("fx-flash"); f.style.animationDelay = `${last}s`; stage.style.animationDelay = `${last - step}s`; stage.classList.add("shake"); }
+  if (kit) buildPachinko(kit.ctx, kit.out, kit.ctx.currentTime + 0.05, chars.length, step, sfxLoading || loadSfx(kit.ctx));
+  const close = () => { fxRun++; fx.hidden = true; fx.textContent = ""; fx.className = ""; clearTimeout(timer); kit && kit.stop(); };
+  const timer = setTimeout(close, (last + 5) * 1000);
+  setTimeout(() => { fx.onclick = close; }, 400);
+}
+
 $("sDopa").addEventListener("change", () => { settings.dopamine = $("sDopa").checked; saveSettings(); if (settings.dopamine) try { loadSfx(); } catch {} });
-$("sDopaTry").addEventListener("click", () => { const pl = plan(); hide(); kakutei(pl ? Math.round(pl.target * 0.9) : 1500, pl ? pl.target : 1700); });
+const tryFx = tier => { const pl = plan(); hide(); kakutei(pl ? Math.round(pl.target * 0.9) : 1500, pl ? pl.target : 1700, tier); };
+$("sDopaTry").addEventListener("click", () => tryFx());
+for (const b of document.querySelectorAll("[data-fxtry]")) b.addEventListener("click", () => tryFx(b.dataset.fxtry));
 
 /* ---------- 筋トレ分を目安に足す ---------- */
 const burnOn = k => workouts.filter(g => dayKey(g.at) === k).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
