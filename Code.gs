@@ -89,14 +89,18 @@ function findWeightRow_(ws, date) {
   return 0;
 }
 
-// 筋トレは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量kg F回数 G記録ID H メモ）
+// 筋トレは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量kg F回数 G記録ID H メモ I時間(分) J消費kcal）
+// メモ・時間・消費kcalは各記録の1行目だけに入れる
+const GYM_HEADER = ['日付', '時刻', '種目', 'セット', '重量(kg)', '回数', '記録ID', 'メモ', '時間(分)', '消費kcal(目安)'];
 function gymSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let gs = ss.getSheetByName('筋トレ');
   if (!gs) {
     gs = ss.insertSheet('筋トレ', ss.getSheets().length);
-    gs.getRange(1, 1, 1, 8).setValues([['日付', '時刻', '種目', 'セット', '重量(kg)', '回数', '記録ID', 'メモ']]);
+    gs.getRange(1, 1, 1, GYM_HEADER.length).setValues([GYM_HEADER]);
     gs.getRange('G:G').setNumberFormat('@');
+  } else if (gs.getRange(1, 9).getDisplayValue() === '') {
+    gs.getRange(1, 9, 1, 2).setValues([GYM_HEADER.slice(8)]); // 以前に作ったシートに列を足す
   }
   return gs;
 }
@@ -169,7 +173,8 @@ function doPost(e) {
       if (rows.length) {
         const start = gs.getLastRow() + 1;
         gs.getRange(start, 7, rows.length, 1).setNumberFormat('@');
-        gs.getRange(start, 1, rows.length, 8).setValues(rows.map(r => r.slice(0, 8)));
+        const n = GYM_HEADER.length;
+        gs.getRange(start, 1, rows.length, n).setValues(rows.map(r => { const a = r.slice(0, n); while (a.length < n) a.push(''); return a; }));
       }
       return out_({ ok: true });
     }
@@ -177,7 +182,7 @@ function doPost(e) {
     if (req.action === 'gym_list') {
       const gs = gymSheet_();
       const last = gs.getLastRow();
-      return out_({ ok: true, rows: last < 2 ? [] : gs.getRange(2, 1, last - 1, 8).getDisplayValues() });
+      return out_({ ok: true, rows: last < 2 ? [] : gs.getRange(2, 1, last - 1, GYM_HEADER.length).getDisplayValues() });
     }
 
     const r = findRow_(sh, req.id);

@@ -15,6 +15,9 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   （`anthropic-dangerous-direct-browser-access: true`）。モデルは設定で選択
   （`claude-sonnet-5-5` / `claude-haiku-5-5`）。返答はJSON `{items:[{name,g,kcal,p,f,c,sugar,source}],comment}`（p/f/c/sugar はたんぱく質・脂質・炭水化物・糖質のg。アプリ内では sugar を s で持つ）。
   `source` は `"label"`（パッケージ等の表示から読んだ）か `"estimate"`（推定）。手で直すと `"manual"`。
+- **読み取る前の確認**：写真を選んでもすぐには送らない。編集画面の「◯◯で読み取る」か「Haiku と Sonnet で比べる（テスト）」を押したときだけ `askClaude(写真, signal, model)` を呼ぶ。比べるときは両方の結果を並べ、使うほうを選ぶ。あとから付けた写真も読み取れる。`max_tokens` は考える過程を含めて 4096。
+- **API使用量**：返事の `usage` を localStorage `foodlog.usage`（`{"yyyy-MM": {model: {n, in, out}}}`）に足し、設定画面に今月・先月の合計を出す。料金は `PRICES`（$/100万トークン）、1ドル＝150円で換算。
+- **食事の区分**：`cat`（朝食・昼食・夕食・間食）。新しい記録は時刻から自動（自分で選んだら固定）、以前の記録は `mealCat()` で時刻から決める。区分ごとに1食と数え、一覧も区分ごとに分ける。シートのC列の先頭に `［朝食］` を付け、読み込み時に外す。
 - **手入力**：下の「手入力」ボタン。写真なし・AIなしで同じ編集画面を開く。
 - **料理名の候補（AIなし）**：過去の記録（「前回」）と、`index.html` 内の目安表 `FOODS`（「目安」、
   `名前|量のめやす|よみ|g|kcal`）から出す。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
@@ -48,8 +51,10 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **タブ**：ヘッダーの「食事／筋トレ」（`setTab()`、localStorage `foodlog.tab`）。下のボタンもタブに合わせて切り替える。
 - **筋トレ**：IndexedDB `workouts` ストア（DBバージョン4）。1件 = `{id, at(ms), items:[{name, sets:[{kg, reps}]}], memo, savedAt}`
   （kg が null なら自重）。種目名の候補は過去の種目＋ `EXERCISES`。種目を選ぶと前回のセットを入れ、「＋ セット」は直前のセットを複製。
+  消費カロリーの目安 `burn()` = METs（ふつう3.5／きつめ6.0）× その日までの最新体重（未記録は60kg）× 時間 × 1.05。時間は入力がなければ1セット3分。
+  食事タブの今日に「筋トレで約◯kcal消費」を出す（目安カロリーには足さない：活動量の係数に運動が含まれるため）。
   今週（月曜はじまり）の回数・セット数・総重量（kg×回）、種目ごとの最大重量のグラフと自己ベスト（推定1RMはEpley式、12回以下）。
-  スプレッドシートは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量 F回数 G記録ID H メモ）。
+  スプレッドシートは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量 F回数 G記録ID H メモ I時間 J消費kcal。H〜Jは各記録の1行目だけ）。
   `gym_upsert`（その記録IDの行を消して入れ直す）/ `gym_delete` / `gym_list`。キューの id は `g:記録ID`、記録IDは `gid` で送る。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。

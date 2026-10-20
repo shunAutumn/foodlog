@@ -167,8 +167,20 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .grab{width:38px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 12px}
 .sheet h3{font-size:1.3rem; font-weight:800; margin:4px 4px 14px}
 .preview{width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:22px; display:block; background:var(--surface2)}
+.catseg{display:flex; gap:4px; margin-left:auto}
+.catseg button{border:0; background:var(--surface2); color:var(--muted); font-weight:700; font-size:.82rem; border-radius:999px; padding:6px 11px; cursor:pointer}
+.catseg button[aria-pressed=true]{background:var(--accent); color:var(--accent-ink)}
+.cathead{display:flex; justify-content:space-between; font-size:.82rem; font-weight:800; color:var(--muted); margin:14px 4px 8px}
+.cathead:first-of-type{margin-top:4px}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
+.cmp{display:grid; gap:10px; margin-top:12px}
+.cmpcard{background:var(--surface); border-radius:18px; padding:12px 14px}
+.cmpcard .btn{margin-top:10px; padding:12px; background:var(--accent-soft); color:var(--accent)}
+.cmphead{font-weight:800; margin-bottom:6px}
+.cmpline{font-size:.88rem; line-height:1.6}
+.cmpline.muted{color:var(--muted); font-size:.8rem}
+.cmptotal{font-weight:800; margin-top:4px}
 .photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
 .status{display:flex; gap:10px; align-items:center; margin:14px 4px 0; font-weight:700; font-size:.92rem}
 .status.err{color:var(--danger)}
@@ -247,6 +259,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="meter" id="meter" hidden><i id="meterFill"></i></div>
     <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
     <div class="sub num" id="todayNuts" hidden></div>
+    <div class="sub num" id="todayBurn" hidden></div>
     <div class="week" id="week" aria-label="直近7日間"></div>
   </section>
 
@@ -313,11 +326,19 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <img class="preview" id="mPhoto" alt="">
     <button class="photobtn" id="mPhotoBtn" type="button">写真を追加</button>
     <input type="file" id="file2" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+    <div id="mRead" hidden>
+      <button class="btn primary" id="mReadGo" type="button">読み取る</button>
+      <button class="btn plain" id="mReadCmp" type="button">Haiku と Sonnet で比べる（テスト）</button>
+    </div>
+    <div class="cmp" id="mCmp" hidden></div>
     <div class="status" id="mStatus"></div>
     <p class="memo" id="mMemo"></p>
 
     <div class="cap">いつ</div>
-    <div class="group"><div class="row"><label for="mTime">食べた時間</label><input type="datetime-local" id="mTime"></div></div>
+    <div class="group">
+      <div class="row"><label for="mTime">食べた時間</label><input type="datetime-local" id="mTime"></div>
+      <div class="row"><label>区分</label><div class="catseg" id="mCat" role="group" aria-label="食事の区分"></div></div>
+    </div>
 
     <div class="cap">食べたもの</div>
     <div class="group" id="mItems"></div>
@@ -336,7 +357,12 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   <div class="sheet-in">
     <div class="grab"></div>
     <h3 id="gsTitle">トレーニング</h3>
-    <div class="group"><div class="row"><label for="gTime">日時</label><input type="datetime-local" id="gTime" style="text-align:right"></div></div>
+    <div class="group">
+      <div class="row"><label for="gTime">日時</label><input type="datetime-local" id="gTime" style="text-align:right"></div>
+      <div class="row"><label for="gMin">時間</label><input type="number" id="gMin" inputmode="numeric" min="0" style="text-align:right; font-weight:700"><span class="u">分</span></div>
+      <div class="row"><label for="gInt">強さ</label>
+        <select id="gInt"><option value="3.5">ふつう（会話できる程度）</option><option value="6">きつめ（息が上がる）</option></select></div>
+    </div>
     <div class="cap">種目</div>
     <div id="gItems"></div>
     <button class="btn plain" id="gAddEx" type="button">＋ 種目を追加</button>
@@ -382,6 +408,10 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
         </select></div>
     </div>
     <p class="help">キーはこのスマホの中にだけ保存され、Anthropicにだけ送られます。</p>
+
+    <div class="cap">今月の読み取り（API使用量）</div>
+    <div class="group" id="usageBox"></div>
+    <p class="help">Claudeからの返事に入っている実際のトークン数から計算しています（1ドル＝150円）。正確な請求額はAnthropic Consoleの「Cost」で確認できます。</p>
 
     <div class="cap">からだ（1日の目安カロリーの計算）</div>
     <div class="group">
@@ -444,6 +474,10 @@ const localInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const sum = items => Math.round(items.reduce((s, i) => s + (Number(i.kcal) || 0), 0));
 const fmt = n => Number(n || 0).toLocaleString("ja-JP");
+// 食事の区分。決めていない記録（以前の記録）は時刻から決める
+const CATS = ["朝食", "昼食", "夕食", "間食"];
+const catOf = ms => { const h = new Date(ms).getHours(); return h >= 4 && h < 10 ? "朝食" : h >= 10 && h < 15 ? "昼食" : h >= 17 && h < 22 ? "夕食" : "間食"; };
+const mealCat = m => CATS.includes(m.cat) ? m.cat : catOf(m.eatenAt);
 
 /* ---------- settings ---------- */
 const SKEY = "foodlog.settings";
@@ -533,14 +567,18 @@ function render(){
   const pl = plan();
   $("todayUnit").textContent = pl ? ` / ${fmt(pl.target)} kcal` : "kcal";
   $("meter").hidden = !pl;
-  let sub = todays.length ? `${todays.length}回の食事` : "きょうはまだ記録がありません";
+  const nMeals = new Set(todays.map(mealCat)).size; // 朝食・昼食・夕食・間食それぞれを1食と数える
+  let sub = todays.length ? `${nMeals}食` : "きょうはまだ記録がありません";
   if (pl){
     const left = pl.target - tTotal;
     $("meterFill").style.width = `${Math.min(100, tTotal / pl.target * 100)}%`;
     $("meter").classList.toggle("over", left < 0);
-    sub = (left >= 0 ? `あと ${fmt(left)} kcal` : `${fmt(-left)} kcal オーバー`) + (todays.length ? `・${todays.length}回の食事` : "");
+    sub = (left >= 0 ? `あと ${fmt(left)} kcal` : `${fmt(-left)} kcal オーバー`) + (todays.length ? `・${nMeals}食` : "");
   }
   $("todaySub").textContent = sub;
+  const tb = workouts.filter(g => dayKey(g.at) === tk).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
+  $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${pl ? "（目安カロリーには含めていません）" : ""}` : "";
+  $("todayBurn").hidden = !tb;
   renderWeight(pl);
   const tn = nutLine(todays.flatMap(m => m.items || []));
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
@@ -572,10 +610,15 @@ function render(){
     const h2 = document.createElement("h2");
     h2.textContent = k === tk ? "今日" : k === yk ? "昨日" : `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
     const s = document.createElement("span"); s.className = "sum num";
-    s.textContent = fmt(arr.reduce((t, m) => t + (m.total || 0), 0)) + " kcal";
+    s.textContent = `${fmt(arr.reduce((t, m) => t + (m.total || 0), 0))} kcal・${new Set(arr.map(mealCat)).size}食`;
     h.append(h2, s);
+    sec.append(h);
+    for (const cat of CATS){
+    const inCat = arr.filter(m => mealCat(m) === cat);
+    if (!inCat.length) continue;
+    const ch = el("div", "cathead"); ch.append(el("span", null, cat), el("span", "num", `${fmt(inCat.reduce((t, m) => t + (m.total || 0), 0))} kcal`));
     const g = document.createElement("div"); g.className = "grid";
-    for (const m of arr){
+    for (const m of inCat){
       const b = document.createElement("button"); b.type = "button"; b.className = "tile";
       const ph = document.createElement("div"); ph.className = "ph";
       if (m.thumb){ const im = document.createElement("img"); im.src = m.thumb; im.alt = ""; im.loading = "lazy"; ph.append(im); }
@@ -591,7 +634,9 @@ function render(){
       b.addEventListener("click", () => openMeal(structuredClone(m), false));
       g.append(b);
     }
-    sec.append(h, g); list.append(sec);
+    sec.append(ch, g);
+    }
+    list.append(sec);
   }
   $("setupNotice").hidden = !!settings.key;
   renderGym();
@@ -768,7 +813,25 @@ const PROMPT =
 次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
 {"items":[{"name":"料理名","g":数値,"kcal":数値,"p":数値,"f":数値,"c":数値,"sugar":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
 
-async function askClaude(jpegDataUrl, signal){
+/* ---------- API使用量（1回ごとの実際のトークン数を月ごとに足していく） ---------- */
+const PRICES = { "claude-sonnet-5-5":{ in:2, out:10, label:"Sonnet" }, "claude-haiku-5-5":{ in:0.1, out:0.5, label:"Haiku" } }; // $ / 100万トークン
+const YEN_PER_USD = 150;
+const UKEY = "foodlog.usage";
+const readUsage = () => { try { return JSON.parse(localStorage.getItem(UKEY) || "{}"); } catch { return {}; } };
+const usd = (model, inp, out) => { const p = PRICES[model] || PRICES["claude-sonnet-5-5"]; return (inp * p.in + out * p.out) / 1e6; };
+function addUsage(model, u){
+  if (!u) return;
+  const all = readUsage(), ym = ymd(Date.now()).slice(0, 7);
+  const m = (all[ym] ||= {}), r = (m[model] ||= { n:0, in:0, out:0 });
+  r.n++; r.in += (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); r.out += u.output_tokens || 0;
+  try { localStorage.setItem(UKEY, JSON.stringify(all)); } catch {}
+}
+const usdTxt = d => d > 0 && d < 0.01 ? d.toFixed(4) : d.toFixed(3);
+const yen = d => d * YEN_PER_USD < 10 ? (d * YEN_PER_USD).toFixed(1) : fmt(Math.round(d * YEN_PER_USD));
+
+async function askClaude(jpegDataUrl, signal, model){
+  model = model || settings.model;
+  const t0 = performance.now();
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST", signal,
     headers:{
@@ -778,7 +841,7 @@ async function askClaude(jpegDataUrl, signal){
       "anthropic-dangerous-direct-browser-access":"true"
     },
     body:JSON.stringify({
-      model:settings.model, max_tokens:1024,
+      model, max_tokens:4096, // 考える過程も含めた上限（使った分だけ課金）
       messages:[{ role:"user", content:[
         { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:jpegDataUrl.split(",")[1] } },
         { type:"text", text:PROMPT }
@@ -790,9 +853,12 @@ async function askClaude(jpegDataUrl, signal){
     const msg = (data && data.error && data.error.message) || "";
     const err = new Error(msg); err.status = res.status; throw err;
   }
+  addUsage(model, data.usage);
   const text = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
-  return JSON.parse(text.slice(a, b + 1));
+  const u = data.usage || {};
+  return { r:JSON.parse(text.slice(a, b + 1)), model, ms:performance.now() - t0,
+    cost:usd(model, (u.input_tokens || 0) + (u.cache_read_input_tokens || 0), u.output_tokens || 0) };
 }
 function apiErrorText(e){
   if (e.name === "AbortError") return "";
@@ -815,7 +881,7 @@ function sheetRow(m){
   return [
     `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`,
     `${d.getHours()}:${pad(d.getMinutes())}`,
-    safe(items.map(i => i.name).filter(Boolean).join("、")),
+    safe(`［${mealCat(m)}］` + items.map(i => i.name).filter(Boolean).join("、")),
     m.total || 0,
     safe(items.map(i => {
       const n = NUTS.filter(([k]) => i[k] != null).map(([k, , short]) => `${short}${i[k]}`).join(" ");
@@ -1061,9 +1127,163 @@ const FOODS = `ご飯|茶碗1杯|ごはん|150|234
 ハイボール|1杯|はいぼーる|350|70
 チューハイ|350ml缶|ちゅーはい|350|180
 日本酒|1合|にほんしゅ|180|190
-ワイン|グラス1杯|わいん|120|80`.split("\n").map(l => {
+ワイン|グラス1杯|わいん|120|80
+生卵|1個|なまたまご たまご|50|71
+卵かけご飯|1杯|たまごかけごはん たまご|200|330
+温泉卵|1個|おんせんたまご たまご|50|71
+クレアチン|5g|くれあちん さぷり さぷりめんと|5|0
+BCAA|1回分|びーしーえーえー さぷり|5|20
+EAA|1回分|いーえーえー さぷり|10|40
+マルチビタミン|1粒|まるちびたみん さぷり|1|0
+フィッシュオイル|2粒|ふぃっしゅおいる おめが さぷり|2|18
+ソイプロテイン|1杯|そいぷろていん ぷろていん|30|115
+プロテイン（牛乳割り）|1杯|ぷろていん ぎゅうにゅう|230|250
+プロテインバー|1本|ぷろていんばー|45|190
+鶏むね肉（皮なし）|100g|とりむねにく ちきん とりにく|100|105
+鶏むね肉（皮つき）|100g|とりむねにく とりにく|100|133
+ささみ|100g|ささみ とりにく|100|98
+鶏もも肉|100g|とりももにく とりにく|100|190
+豚ロース|100g|ぶたろーす ぶたにく|100|248
+豚バラ|100g|ぶたばら ぶたにく|100|366
+豚こま切れ|100g|ぶたこま ぶたにく|100|200
+牛もも|100g|ぎゅうもも ぎゅうにく|100|196
+牛バラ|100g|ぎゅうばら ぎゅうにく|100|380
+合いびき肉|100g|あいびきにく ひきにく|100|250
+鮭（生）|1切れ|さけ しゃけ さーもん|80|100
+サーモン刺身|5切れ|さーもん さしみ|60|130
+まぐろ赤身|刺身5切れ|まぐろ さしみ|60|70
+サバ缶（水煮）|1缶|さばかん さば|150|260
+ツナ缶（ノンオイル）|1缶|つなかん つな|70|50
+ツナ缶（油漬け）|1缶|つなかん つな|70|186
+豆腐（木綿）|1丁|とうふ もめんどうふ|300|219
+豆腐（絹）|1丁|とうふ きぬどうふ|300|168
+厚揚げ|1枚|あつあげ|150|215
+油揚げ|1枚|あぶらあげ|30|113
+ブロッコリー|100g|ぶろっこりー やさい|100|37
+キャベツ|100g|きゃべつ やさい|100|21
+レタス|100g|れたす やさい|100|11
+トマト|1個|とまと やさい|150|30
+ミニトマト|5個|みにとまと やさい|75|22
+きゅうり|1本|きゅうり やさい|100|13
+にんじん|1本|にんじん やさい|150|50
+玉ねぎ|1個|たまねぎ やさい|200|66
+じゃがいも|1個|じゃがいも|150|90
+焼き芋|1本|やきいも さつまいも|200|300
+かぼちゃ|100g|かぼちゃ|100|78
+アボカド|1個|あぼかど|140|250
+グレープフルーツ|1/2個|ぐれーぷふるーつ|150|60
+パイナップル|100g|ぱいなっぷる|100|54
+すいか|1切れ|すいか|200|80
+梨|1/2個|なし|130|55
+柿|1個|かき|180|113
+白米|100g|はくまい ごはん こめ|100|156
+もち|1個|もち おもち|50|112
+パスタ（ゆで）|100g|ぱすた すぱげってぃ|100|150
+パスタ（乾麺）|100g|ぱすた すぱげってぃ かんめん|100|347
+うどん（ゆで）|1玉|うどん|250|238
+そば（ゆで）|1玉|そば|200|260
+中華麺（ゆで）|1玉|ちゅうかめん|200|266
+そうめん（ゆで）|1束分|そうめん|130|148
+ベーグル|1個|べーぐる ぱん|90|243
+フランスパン|5cm|ふらんすぱん ばげっと ぱん|30|87
+ナン|1枚|なん|100|257
+低脂肪乳|コップ1杯|ていしぼうにゅう ぎゅうにゅう|200|90
+ギリシャヨーグルト|1個|ぎりしゃよーぐると よーぐると|113|92
+スライスチーズ|1枚|すらいすちーず ちーず|18|56
+6Pチーズ|1個|ろくぴーちーず ちーず|18|55
+カマンベールチーズ|1/6個|かまんべーる ちーず|17|50
+バター|10g|ばたー|10|70
+マーガリン|10g|まーがりん|10|72
+マヨネーズ|大さじ1|まよねーず|12|80
+ケチャップ|大さじ1|けちゃっぷ|15|16
+オリーブオイル|大さじ1|おりーぶおいる あぶら|12|107
+サラダ油|大さじ1|さらだあぶら あぶら|12|106
+砂糖|大さじ1|さとう|9|35
+はちみつ|大さじ1|はちみつ|21|69
+ごまドレッシング|大さじ1|ごまどれっしんぐ どれっしんぐ|15|60
+ノンオイルドレッシング|大さじ1|のんおいるどれっしんぐ どれっしんぐ|15|12
+醤油|大さじ1|しょうゆ|18|14
+味噌|大さじ1|みそ|18|35
+ジャム|大さじ1|じゃむ|21|53
+ピーナッツバター|大さじ1|ぴーなっつばたー|17|108
+アーモンド|10粒|あーもんど なっつ|12|73
+ミックスナッツ|ひとつかみ|みっくすなっつ なっつ|25|155
+くるみ|5個|くるみ なっつ|15|107
+ポップコーン|1袋|ぽっぷこーん|50|240
+グミ|1袋|ぐみ|50|170
+キムチ|小皿|きむち|50|14
+野菜炒め|1人前|やさいいため|200|200
+冷やし中華|1人前|ひやしちゅうか|450|550
+担々麺|1杯|たんたんめん|600|700
+ちゃんぽん|1杯|ちゃんぽん|700|700
+ビビンバ|1杯|びびんば|400|600
+幕の内弁当|1個|まくのうちべんとう べんとう|400|700
+のり弁当|1個|のりべんとう のりべん べんとう|400|750
+唐揚げ弁当|1個|からあげべんとう べんとう|450|900
+ハンバーグ弁当|1個|はんばーぐべんとう べんとう|450|850
+たまごサンド|1パック|たまごさんど さんどいっち|130|330
+フルーツサンド|1パック|ふるーつさんど さんどいっち|150|350
+おでん 大根|1個|おでん だいこん|80|10
+おでん 卵|1個|おでん たまご|50|76
+おでん はんぺん|1枚|おでん はんぺん|100|94
+おでん ちくわ|1本|おでん ちくわ|30|36
+おでん こんにゃく|1個|おでん こんにゃく|60|4
+水|500ml|みず|500|0
+炭酸水|500ml|たんさんすい|500|0
+麦茶|500ml|むぎちゃ おちゃ|500|5
+紅茶（無糖）|1杯|こうちゃ|150|2
+ミルクティー|500mlペット|みるくてぃー こうちゃ|500|185
+カフェオレ|500mlペット|かふぇおれ|500|200
+野菜ジュース|200ml|やさいじゅーす|200|70
+トマトジュース|200ml|とまとじゅーす|200|40
+りんごジュース|200ml|りんごじゅーす|200|88
+サイダー|500ml|さいだー|500|205
+レッドブル|250ml缶|れっどぶる えなじーどりんく|250|113
+モンスターエナジー|355ml缶|もんすたーえなじー えなじーどりんく|355|178
+ゼロカロリー飲料|1本|ぜろかろりー こーらぜろ|500|0
+甘酒|200ml|あまざけ|200|160
+ウイスキー|シングル30ml|ういすきー|30|70
+焼酎|水割り1杯|しょうちゅう|180|88
+レモンサワー|中ジョッキ|れもんさわー さわー ちゅーはい|350|160
+ストロング系チューハイ|350ml缶|すとろんぐ ちゅーはい|350|200
+ノンアルコールビール|350ml缶|のんあるこーるびーる のんある|350|20
+カップヌードル|日清|かっぷぬーどる にっしん かっぷらーめん|0|351
+どん兵衛 きつねうどん|日清|どんべえ きつねうどん にっしん|0|421
+赤いきつね|東洋水産|あかいきつね まるちゃん|0|432
+ビッグマック|マクドナルド|まくどなるど まっく まくど びっぐまっく|0|525
+ハンバーガー|マクドナルド|まくどなるど まっく まくど|0|256
+チーズバーガー|マクドナルド|まくどなるど まっく まくど|0|307
+ダブルチーズバーガー|マクドナルド|まくどなるど まっく まくど だぶちー|0|457
+てりやきマックバーガー|マクドナルド|まくどなるど まっく まくど てりやき|0|477
+フィレオフィッシュ|マクドナルド|まくどなるど まっく まくど ふぃれおふぃっしゅ|0|323
+エッグマックマフィン|マクドナルド|まくどなるど まっく まくど あさまっく|0|311
+マックフライポテト（S）|マクドナルド|まくどなるど まっく まくど ぽてと|0|225
+マックフライポテト（M）|マクドナルド|まくどなるど まっく まくど ぽてと|0|409
+マックフライポテト（L）|マクドナルド|まくどなるど まっく まくど ぽてと|0|517
+チキンマックナゲット 5ピース|マクドナルド|まくどなるど まっく まくど なげっと|0|270
+ホットアップルパイ|マクドナルド|まくどなるど まっく まくど あっぷるぱい|0|211
+オリジナルチキン|ケンタッキー 1ピース|けんたっきー けんた けーえふしー ちきん|0|237
+モスバーガー|モスバーガー|もすばーがー もす|0|367
+テリヤキバーガー|モスバーガー|もすばーがー もす てりやき|0|378
+モスチーズバーガー|モスバーガー|もすばーがー もす|0|416
+ワッパー|バーガーキング|ばーがーきんぐ わっぱー|0|650
+牛丼（並盛）|吉野家|よしのや ぎゅうどん|0|635
+牛丼（並盛）|すき家|すきや ぎゅうどん|0|733
+牛めし（並盛）|松屋|まつや ぎゅうめし ぎゅうどん|0|692
+ポークカレー（ご飯300g）|CoCo壱番屋|ここいちばんや ここいち かれー|0|735
+かけうどん（並）|丸亀製麺|まるがめせいめん まるがめ うどん|0|300
+ミラノ風ドリア|サイゼリヤ|さいぜりや さいぜ どりあ|0|520
+スターバックス ラテ（トール）|スターバックス|すたーばっくす すたば らて|0|223
+ドリップコーヒー（トール）|スターバックス|すたーばっくす すたば こーひー|0|11
+キャラメル フラペチーノ（トール）|スターバックス|すたーばっくす すたば ふらぺちーの|0|341
+ポン・デ・リング|ミスタードーナツ|みすたーどーなつ みすど ぽんでりんぐ|0|219
+オールドファッション|ミスタードーナツ|みすたーどーなつ みすど|0|306
+エンゼルフレンチ|ミスタードーナツ|みすたーどーなつ みすど|0|213
+ローストチキン|サブウェイ|さぶうぇい さんどいっち|0|300
+ファミチキ|ファミリーマート|ふぁみりーまーと ふぁみま ふぁみちき|0|252
+からあげクン レギュラー|ローソン|ろーそん からあげくん|0|220`.split("\n").map(l => {
   const [name, note, yomi, g, kcal] = l.split("|");
-  return { name, note, g:+g, kcal:+kcal, key:norm(name) + "|" + norm(yomi), src:"目安" };
+  return { name, note, g:+g, kcal:+kcal, key:[name, yomi, note].map(norm).join("|"), src:"目安" };
 });
 // カタカナ・全角半角・大文字小文字の違いを吸収（入力途中のひらがなでも当たるように）
 function norm(s){
@@ -1084,9 +1304,10 @@ function buildHistory(){
 }
 function suggest(q){
   q = norm(q); if (!q) return [];
-  const rank = (e, base) => e.key.split("|").some(k => k.startsWith(q)) ? base : e.key.includes(q) ? base + 1 : -1;
+  // よみは空白区切りで複数（チェーン名・略称など）。前方一致を先に、部分一致をあとに出す
+  const rank = (e, base) => e.key.split(/[| ]/).some(k => k && k.startsWith(q)) ? base : e.key.includes(q) ? base + 1 : -1;
   return [...past.map(e => [e, rank(e, 0)]), ...FOODS.map(e => [e, rank(e, 2)])]
-    .filter(([, r]) => r >= 0).sort((a, b) => a[1] - b[1]).slice(0, 6).map(([e]) => e);
+    .filter(([, r]) => r >= 0).sort((a, b) => a[1] - b[1]).slice(0, 8).map(([e]) => e);
 }
 function pick(it, e){
   it.name = e.name; it.kcal = e.kcal;
@@ -1167,10 +1388,12 @@ function openMeal(m, isNew){
   buildHistory();
   m.items = (m.items || []).map(i => withBase({ ...blank(), ...i }));
   draft = m; draft._new = isNew;
-  showPhoto();
+  draft.cat = m.cat || catOf(m.eatenAt); draft._catAuto = !m.cat;
+  showPhoto(); renderCat();
   $("mTime").value = localInput(m.eatenAt);
   $("mMemo").textContent = m.comment || "";
   setStatus($("mStatus"), "");
+  showReadBox();
   $("mDelete").hidden = isNew;
   $("mSave").textContent = isNew ? "記録する" : "保存する";
   $("mSave").disabled = false;
@@ -1189,11 +1412,23 @@ $("file2").addEventListener("change", async () => {
     const thumb = await shrink(f, 480, .72), big = await shrink(f, 1400, .85);
     if (draft !== mine) return;
     Object.assign(draft, { thumb, _photo:big, _photoChanged:true });
-    showPhoto();
-    if (!draft._new) setStatus($("mStatus"), "「保存する」を押すと写真が変わります。");
+    showPhoto(); showReadBox();
+    if (!draft._new) setStatus($("mStatus"), settings.key ? "「保存する」を押すと写真が変わります。読み取ることもできます。" : "「保存する」を押すと写真が変わります。");
   } catch { setStatus($("mStatus"), "写真を読み込めませんでした。別の写真で試してください。", "err"); }
 });
-$("mTime").addEventListener("change",() => { const t = new Date($("mTime").value).getTime(); if (!isNaN(t) && draft) draft.eatenAt = t; });
+$("mTime").addEventListener("change", () => {
+  const t = new Date($("mTime").value).getTime(); if (isNaN(t) || !draft) return;
+  draft.eatenAt = t;
+  if (draft._catAuto){ draft.cat = catOf(t); renderCat(); } // 自分で選んでいなければ、時刻に合わせる
+});
+function renderCat(){
+  const box = $("mCat"); box.textContent = "";
+  for (const c of CATS){
+    const b = el("button", null, c); b.type = "button"; b.setAttribute("aria-pressed", String(draft.cat === c));
+    b.addEventListener("click", () => { draft.cat = c; draft._catAuto = false; renderCat(); });
+    box.append(b);
+  }
+}
 $("mCancel").addEventListener("click", hide);
 
 $("shutter").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
@@ -1207,35 +1442,87 @@ $("file").addEventListener("change", async () => {
   const eatenAt = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
   let thumb = "", big = "";
   try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
-  openMeal({ id:newId(), eatenAt, items:[], total:0, thumb, comment:"", _photo:big || thumb, _photoChanged:true }, true);
-  if (!settings.key || !big){
-    draft.items = [blank()]; renderItems();
-    setStatus($("mStatus"), settings.key ? "写真を読み込めませんでした。手で入力してください。" : "APIキーが未設定なので、手で入力してください。", "err");
-    return;
-  }
+  openMeal({ id:newId(), eatenAt, items:[blank()], total:0, thumb, comment:"", _photo:big || thumb, _photoChanged:true }, true);
+  if (!big) setStatus($("mStatus"), "写真を読み込めませんでした。手で入力してください。", "err");
+  showReadBox();
+});
+
+// 写真を読み取る前に確認する（読み取るかどうか・どのモデルで読むかを選ぶ）
+function showReadBox(){
+  const can = !!(draft && draft._photo && settings.key);
+  $("mRead").hidden = !can; $("mCmp").hidden = true; $("mCmp").textContent = "";
+  $("mReadGo").textContent = `${(PRICES[settings.model] || {}).label || ""}で読み取る`;
+  if (draft && draft._photo && !settings.key) setStatus($("mStatus"), "APIキーが未設定なので、手で入力してください。");
+  else if (can) setStatus($("mStatus"), "写真を確認して、読み取るか、下に手で入力してください。");
+}
+const filled = () => draft.items.some(i => (i.name || "").trim() || i.kcal > 0);
+const mapItems = r => Array.isArray(r.items) ? r.items.map(i => withBase({
+  name:String(i.name ?? "").slice(0, 60), g:Math.max(0, Math.round(Number(i.g) || 0)),
+  kcal:Math.max(0, Math.round(Number(i.kcal) || 0)),
+  p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.sugar),
+  source:i.source === "label" ? "label" : "estimate"
+})) : [];
+function useResult(res){
+  const items = mapItems(res.r);
+  draft.items = items.length ? items : [blank()];
+  draft.comment = typeof res.r.comment === "string" ? res.r.comment.slice(0, 120) : "";
+  $("mMemo").textContent = draft.comment;
+  setStatus($("mStatus"), items.length ? "読み取りました。違うところは直してください。" : "食べ物が見つかりませんでした。手で入力できます。");
+  renderItems();
+}
+const readErr = e => e instanceof SyntaxError ? "うまく読み取れませんでした。手で入力してください。" : apiErrorText(e);
+$("mReadGo").addEventListener("click", async () => {
+  if (!draft || (filled() && !confirm("入力した内容を、読み取った結果で置き換えます。よろしいですか？"))) return;
+  const mine = draft;
+  $("mRead").hidden = true;
   setStatus($("mStatus"), "写真を読み取っています", "busy");
   ctl = new AbortController();
-  const mine = draft;
   try {
-    const r = await askClaude(big, ctl.signal);
-    if (draft !== mine) return;
-    const items = Array.isArray(r.items) ? r.items.map(i => withBase({
-      name:String(i.name ?? "").slice(0, 60), g:Math.max(0, Math.round(Number(i.g) || 0)),
-      kcal:Math.max(0, Math.round(Number(i.kcal) || 0)),
-      p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.sugar),
-      source:i.source === "label" ? "label" : "estimate"
-    })) : [];
-    draft.items = items.length ? items : [blank()];
-    draft.comment = typeof r.comment === "string" ? r.comment.slice(0, 120) : "";
-    $("mMemo").textContent = draft.comment;
-    setStatus($("mStatus"), items.length ? "読み取りました。違うところは直してください。" : "食べ物が見つかりませんでした。手で入力できます。");
-    renderItems();
+    const res = await askClaude(mine._photo, ctl.signal);
+    if (draft === mine) useResult(res);
   } catch (e){
     if (draft !== mine) return;
-    const msg = e instanceof SyntaxError ? "うまく読み取れませんでした。手で入力してください。" : apiErrorText(e);
-    if (msg) setStatus($("mStatus"), msg, "err");
-    if (!draft.items.length){ draft.items = [blank()]; renderItems(); }
+    const msg = readErr(e); if (msg) setStatus($("mStatus"), msg, "err");
+    $("mRead").hidden = false;
   } finally { ctl = null; }
+});
+// テスト用：HaikuとSonnetに同じ写真を読ませて、結果を並べる
+$("mReadCmp").addEventListener("click", async () => {
+  if (!draft) return;
+  const mine = draft, box = $("mCmp");
+  $("mRead").hidden = true; box.hidden = false; box.textContent = "";
+  setStatus($("mStatus"), "HaikuとSonnetで読み取っています", "busy");
+  ctl = new AbortController();
+  const models = ["claude-haiku-5-5", "claude-sonnet-5-5"];
+  const cards = models.map(m => { const c = el("div", "cmpcard"); c.append(el("div", "cmphead", `${PRICES[m].label}：読み取り中…`)); box.append(c); return c; });
+  let done = 0;
+  await Promise.all(models.map(async (m, i) => {
+    const c = cards[i];
+    try {
+      const res = await askClaude(mine._photo, ctl.signal, m);
+      if (draft !== mine) return;
+      const items = mapItems(res.r);
+      c.textContent = "";
+      c.append(el("div", "cmphead num", `${PRICES[m].label}・${(res.ms / 1000).toFixed(1)}秒・約${yen(res.cost)}円`));
+      for (const it of items) c.append(el("div", "cmpline num", `${it.name}　${it.g ? it.g + "g　" : ""}${fmt(it.kcal)}kcal`));
+      if (!items.length) c.append(el("div", "cmpline", "食べ物が見つかりませんでした"));
+      c.append(el("div", "cmptotal num", `合計 ${fmt(sum(items))} kcal`));
+      const nl = nutLine(items); if (nl) c.append(el("div", "cmpline muted num", nl));
+      if (res.r.comment) c.append(el("div", "cmpline muted", String(res.r.comment).slice(0, 120)));
+      const use = el("button", "btn plain", "この結果を使う"); use.type = "button";
+      use.addEventListener("click", () => {
+        if (filled() && !confirm("入力した内容を、この結果で置き換えます。よろしいですか？")) return;
+        useResult(res); box.hidden = true;
+      });
+      c.append(use);
+    } catch (e){
+      if (draft !== mine) return;
+      c.textContent = ""; c.append(el("div", "cmphead", `${PRICES[m].label}`), el("div", "cmpline", readErr(e) || "読み取りをやめました"));
+    } finally {
+      if (draft === mine && ++done === models.length) setStatus($("mStatus"), "結果を比べて、使うほうを選んでください。");
+    }
+  }));
+  ctl = null;
 });
 
 $("mSave").addEventListener("click", async () => {
@@ -1243,7 +1530,7 @@ $("mSave").addEventListener("click", async () => {
   const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0 || hasNuts(i))
     .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0),
       p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
-  const m = { id:draft.id, eatenAt:draft.eatenAt, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
+  const m = { id:draft.id, eatenAt:draft.eatenAt, cat:draft.cat, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
   const photo = draft._photoChanged && draft._photo;
   $("mSave").disabled = true;
   try {
@@ -1358,14 +1645,26 @@ function openGym(g, isNew){
   gdraft = structuredClone(g); gdraft._new = isNew;
   $("gTime").value = localInput(gdraft.at);
   $("gMemo").value = gdraft.memo || "";
+  $("gMin").value = gdraft.min || ""; $("gInt").value = String(gdraft.int || 3.5);
   $("gDel").hidden = isNew; $("gSave").textContent = isNew ? "記録する" : "保存する"; $("gSave").disabled = false;
   setStatus($("gStatus"), "");
   renderGItems(); show($("gSheet"));
 }
 function gTotal(){
-  const s = setCount(gdraft), v = vol(gdraft);
-  $("gTotal").textContent = `${s}セット${v ? `・${fmt(Math.round(v))}kg` : ""}`;
+  const s = setCount(gdraft), v = vol(gdraft), b = burn(gdraft);
+  $("gTotal").textContent = `${s}セット${v ? `・${fmt(Math.round(v))}kg` : ""}${s ? `・約${fmt(b.kcal)}kcal` : ""}`;
+  $("gMin").placeholder = `約${b.min}`;
+  setStatus($("gStatus"), s ? `消費カロリーは 体重${b.kg}kg${b.guessKg ? "（未記録のため仮）" : ""}・${b.min}分${gdraft.min ? "" : "（1セット3分で計算）"} で計算した目安です。` : "");
 }
+// 筋トレの消費カロリーの目安：METs × 体重kg × 時間 × 1.05
+function burn(g){
+  const sets = setCount(g), min = g.min > 0 ? g.min : Math.max(10, sets * 3);
+  const day = ymd(g.at), past = weights.filter(w => w.date <= day), w = (past[past.length - 1] || weights[weights.length - 1] || {}).kg;
+  const kg = w || 60;
+  return { kcal:sets ? Math.round(Number(g.int || 3.5) * kg * min / 60 * 1.05) : 0, min, kg, guessKg:!w };
+}
+$("gMin").addEventListener("input", () => { if (gdraft){ gdraft.min = Math.max(0, Math.round(Number($("gMin").value) || 0)) || null; gTotal(); } });
+$("gInt").addEventListener("change", () => { if (gdraft){ gdraft.int = Number($("gInt").value); gTotal(); } });
 function renderGItems(){
   const box = $("gItems"); box.textContent = "";
   gdraft.items.forEach((it, idx) => {
@@ -1438,7 +1737,8 @@ $("gCancel").addEventListener("click", hide);
 function gymRows(g){
   const d = new Date(g.at), rows = [];
   const date = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`, time = `${d.getHours()}:${pad(d.getMinutes())}`;
-  for (const it of g.items) it.sets.forEach((s, i) => rows.push([date, time, safe(it.name), i + 1, s.kg ?? "", s.reps ?? "", g.id, rows.length ? "" : safe(g.memo || "")]));
+  for (const it of g.items) it.sets.forEach((s, i) => rows.push([date, time, safe(it.name), i + 1, s.kg ?? "", s.reps ?? "", g.id,
+    rows.length ? "" : safe(g.memo || ""), rows.length ? "" : burn(g).min, rows.length ? "" : (g.kcal ?? burn(g).kcal)]));
   return rows;
 }
 $("gSave").addEventListener("click", async () => {
@@ -1446,7 +1746,8 @@ $("gSave").addEventListener("click", async () => {
   const items = gdraft.items.map(it => ({ name:(it.name || "").trim(), sets:it.sets.filter(s => s.kg > 0 || s.reps > 0).map(s => ({ kg:s.kg > 0 ? s.kg : null, reps:s.reps > 0 ? s.reps : null })) }))
     .filter(it => it.name && it.sets.length);
   if (!items.length) return setStatus($("gStatus"), "種目名と、重さか回数を1セット以上入れてください。", "err");
-  const g = { id:gdraft.id, at:gdraft.at, items, memo:$("gMemo").value.trim(), savedAt:Date.now() };
+  const g = { id:gdraft.id, at:gdraft.at, items, memo:$("gMemo").value.trim(), min:gdraft.min || null, int:Number(gdraft.int || 3.5), savedAt:Date.now() };
+  g.kcal = burn(g).kcal;
   $("gSave").disabled = true;
   try {
     await DB.putG(g);
@@ -1472,7 +1773,7 @@ function renderGym(){
   const mon = new Date(now); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
   const wk = gs.filter(g => g.at >= mon.getTime());
   $("gWeekCount").textContent = String(wk.length);
-  $("gWeekSub").textContent = wk.length ? `${wk.reduce((s, g) => s + setCount(g), 0)}セット・総重量 ${fmt(Math.round(wk.reduce((s, g) => s + vol(g), 0)))}kg` : "今週はまだ記録がありません";
+  $("gWeekSub").textContent = wk.length ? `${wk.reduce((s, g) => s + setCount(g), 0)}セット・総重量 ${fmt(Math.round(wk.reduce((s, g) => s + vol(g), 0)))}kg・消費 約${fmt(wk.reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0))}kcal` : "今週はまだ記録がありません";
   // 直近7日のセット数
   const days = []; for (let i = 6; i >= 0; i--){ const d = new Date(now); d.setDate(now.getDate() - i); days.push(d); }
   const per = days.map(d => gs.filter(g => dayKey(g.at) === dayKey(d.getTime())).reduce((s, g) => s + setCount(g), 0));
@@ -1504,7 +1805,7 @@ function renderGym(){
     const d = new Date(g.at), b = el("button", "session"); b.type = "button";
     const sh = el("div", "sh");
     sh.append(el("span", null, `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）${d.getHours()}:${pad(d.getMinutes())}`),
-      el("span", "num", `${setCount(g)}セット${vol(g) ? `・${fmt(Math.round(vol(g)))}kg` : ""}`));
+      el("span", "num", `${setCount(g)}セット${vol(g) ? `・${fmt(Math.round(vol(g)))}kg` : ""}・約${fmt(g.kcal ?? burn(g).kcal)}kcal`));
     b.append(sh);
     for (const it of g.items){ const e = el("div", "ex", it.name); e.append(el("small", "num", fmtSets(it.sets))); b.append(e); }
     if (g.memo) b.append(el("div", "memo2", g.memo));
@@ -1590,11 +1891,35 @@ $("wDel").addEventListener("click", async () => {
   enqueue({ action:"weight_upsert", id:"w:" + date, date, kg:null });
 });
 
+function renderUsage(){
+  const box = $("usageBox"); box.textContent = "";
+  const now = new Date(), ym = ymd(now.getTime()).slice(0, 7);
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 15), pym = ymd(prev.getTime()).slice(0, 7);
+  const all = readUsage(), month = all[ym] || {};
+  const right = (text, bold) => { const s = el("span", "num", text); s.style.marginLeft = "auto"; s.style.fontWeight = bold ? "800" : "700"; return s; };
+  let total = 0, calls = 0;
+  for (const [model, r] of Object.entries(month)){
+    const d = usd(model, r.in, r.out); total += d; calls += r.n;
+    const row = el("div", "row");
+    row.append(el("label", null, (PRICES[model] || {}).label || model), el("span", "u num", `${r.n}回・入力${fmt(r.in)}／出力${fmt(r.out)}`), right(`$${usdTxt(d)}`));
+    box.append(row);
+  }
+  const sum = el("div", "row");
+  sum.append(el("label", null, `${now.getMonth() + 1}月の合計`), el("span", "u num", calls ? `${calls}回` : "まだ使っていません"), right(`$${usdTxt(total)}（約${yen(total)}円）`, true));
+  box.append(sum);
+  if (all[pym]){
+    const pt = Object.entries(all[pym]).reduce((s, [m, r]) => s + usd(m, r.in, r.out), 0);
+    const pr = el("div", "row"); pr.append(el("label", null, `${prev.getMonth() + 1}月`), right(`$${usdTxt(pt)}（約${yen(pt)}円）`));
+    box.append(pr);
+  }
+}
+
 /* ---------- settings ---------- */
 const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoal:"goal", pPace:"pace" };
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
+  renderUsage();
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
@@ -1641,12 +1966,13 @@ $("sImport").addEventListener("click", async () => {
     const r = await callSheet({ action:"list" });
     const have = new Set(meals.map(m => m.id)); let added = 0;
     for (const row of r.rows || []){
-      const [date, time, names, kcal, detail, memo, id] = row;
+      const [date, time, names0, kcal, detail, memo, id] = row;
+      const cm = String(names0 || "").match(/^［(朝食|昼食|夕食|間食)］/), names = cm ? String(names0).slice(cm[0].length) : names0;
       if (!id || have.has(String(id))) continue;
       const dm = String(date).match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/), tm = String(time).match(/(\d{1,2}):(\d{2})/);
       if (!dm) continue;
       const t = new Date(+dm[1], +dm[2] - 1, +dm[3], tm ? +tm[1] : 12, tm ? +tm[2] : 0).getTime();
-      const m = { id:String(id), eatenAt:t, items:String(names || "").split("、").filter(Boolean).map((n, i, a) => ({ name:n, kcal:a.length === 1 ? Number(kcal) || 0 : 0, source:"manual" })), total:Number(kcal) || 0, thumb:"", comment:String(memo || ""), savedAt:Date.now() };
+      const m = { id:String(id), eatenAt:t, ...(cm ? { cat:cm[1] } : {}), items:String(names || "").split("、").filter(Boolean).map((n, i, a) => ({ name:n, kcal:a.length === 1 ? Number(kcal) || 0 : 0, source:"manual" })), total:Number(kcal) || 0, thumb:"", comment:String(memo || ""), savedAt:Date.now() };
       if (m.items.length > 1){ m.items = [{ name:String(names), kcal:m.total, source:"manual" }]; }
       const parsed = parseDetail(detail);
       if (parsed && sum(parsed) === m.total) m.items = parsed;
@@ -1670,13 +1996,15 @@ $("sImport").addEventListener("click", async () => {
     try {
       const gr = await callSheet({ action:"gym_list" });
       const byId = new Map();
-      for (const [date, time, name, , kg, reps, id, memo] of gr.rows || []){
+      for (const [date, time, name, , kg, reps, id, memo, min, kc] of gr.rows || []){
         if (!id || workouts.some(w => w.id === id)) continue;
         const dm = String(date).match(/(d{4})D(d{1,2})D(d{1,2})/), tm = String(time).match(/(d{1,2}):(d{2})/);
         if (!dm) continue;
         let g = byId.get(id);
         if (!g){ g = { id, at:new Date(+dm[1], +dm[2] - 1, +dm[3], tm ? +tm[1] : 12, tm ? +tm[2] : 0).getTime(), items:[], memo:"", savedAt:Date.now() }; byId.set(id, g); }
         if (memo && !g.memo) g.memo = String(memo);
+        if (Number(min) > 0 && !g.min) g.min = Number(min);
+        if (Number(kc) > 0 && !g.kcal) g.kcal = Number(kc);
         let it = g.items.find(i => i.name === name);
         if (!it){ it = { name:String(name), sets:[] }; g.items.push(it); }
         it.sets.push({ kg:Number(kg) > 0 ? Number(kg) : null, reps:Number(reps) > 0 ? Number(reps) : null });
