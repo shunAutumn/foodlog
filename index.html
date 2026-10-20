@@ -22,7 +22,7 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme=light]){
     --bg:#0E1110; --surface:#181C1A; --surface2:#202522; --ink:#F1F4F2; --muted:#8E9893; --line:#2A302C;
     --accent:#3DD39A; --accent-ink:#06130D; --accent-soft:#163327; --label:#F2B65A; --danger:#FF7466;
     --glass:rgba(14,17,16,.72);
@@ -30,13 +30,20 @@
     color-scheme:dark;
   }
 }
+:root[data-theme=dark]{
+    --bg:#0E1110; --surface:#181C1A; --surface2:#202522; --ink:#F1F4F2; --muted:#8E9893; --line:#2A302C;
+    --accent:#3DD39A; --accent-ink:#06130D; --accent-soft:#163327; --label:#F2B65A; --danger:#FF7466;
+    --glass:rgba(14,17,16,.72);
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none !important}
 html,body{margin:0; background:var(--bg); color:var(--ink)}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
-  min-height:100vh; padding-bottom:calc(120px + env(safe-area-inset-bottom));
+  min-height:100vh;
 }
 button{font:inherit; color:inherit}
 .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
@@ -48,6 +55,50 @@ button{font:inherit; color:inherit}
 .top .date{font-size:.8rem; color:var(--muted); font-weight:600}
 .top h1{margin:0; font-size:1.9rem; font-weight:800; letter-spacing:-.02em}
 .top{flex-wrap:wrap}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+/* 下のタブバー */
+.tabbar{position:fixed; left:0; right:0; bottom:0; z-index:8; display:grid; grid-template-columns:repeat(5,1fr); align-items:end;
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom)); background:var(--glass); border-top:1px solid var(--line);
+  -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px)}
+.tabbar button{border:0; background:none; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:2px; font-size:.68rem; font-weight:700; padding:4px 0; cursor:pointer}
+.tabbar button svg{width:24px; height:24px}
+.tabbar button[aria-selected=true]{color:var(--accent)}
+.tabbar .recbtn{color:var(--accent-ink)}
+.tabbar .recbtn svg{width:30px; height:30px; padding:12px; box-sizing:content-box; border-radius:50%; background:var(--accent); margin-top:-26px;
+  box-shadow:0 0 0 5px var(--bg), var(--shadow)}
+.tabbar .recbtn span{color:var(--accent); font-weight:800}
+.recopt{display:flex; align-items:center; gap:14px; width:100%; text-align:left; border:0; border-radius:18px; background:var(--surface); padding:16px; margin-bottom:10px; cursor:pointer}
+.recopt .ri{font-size:1.6rem; width:44px; height:44px; display:grid; place-items:center; border-radius:12px; background:var(--accent-soft); flex:none}
+.recopt .rt{display:flex; flex-direction:column; gap:2px}
+.recopt .rt b{font-size:1rem}
+.recopt .rt small{color:var(--muted); font-size:.8rem}
+/* 見ている日 */
+.dayline{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:.9rem}
+.dayline b{font-weight:800}
+.daynav{display:flex; align-items:center; gap:10px}
+.pickday{position:relative; color:var(--accent); font-weight:700; font-size:.82rem; cursor:pointer}
+.pickday input{position:absolute; inset:0; opacity:0; width:100%; cursor:pointer}
+.week button.col{border:0; background:none; padding:0; cursor:pointer; color:inherit; font:inherit}
+.week .col.sel .bar{background:var(--accent)}
+.week .col.sel .d{color:var(--accent)}
+.week .col.today:not(.sel) .bar{background:var(--accent-soft)}
+/* 設定のカテゴリ */
+.setcat{background:var(--surface); border-radius:18px; margin-bottom:10px; overflow:hidden}
+.setcat summary{list-style:none; display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer}
+.setcat summary::-webkit-details-marker{display:none}
+.setcat summary span{display:flex; flex-direction:column; gap:2px}
+.setcat summary b{font-size:1rem}
+.setcat summary small{color:var(--muted); font-size:.78rem}
+.setcat summary::after{content:"›"; font-size:1.4rem; color:var(--muted); transition:transform .2s}
+.setcat[open] summary::after{transform:rotate(90deg)}
+.setbody{padding:0 10px 14px}
+.setbody .group{background:var(--surface2)}
+.setbody .group .row{border-color:var(--line)}
+.catseg.wide{margin:0; width:100%}
+.catseg.wide button{flex:1}
+.swatches{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end}
+.swatch{width:30px; height:30px; border-radius:50%; border:0; cursor:pointer; box-shadow:0 0 0 2px var(--surface2)}
+.swatch[aria-pressed=true]{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--ink)}
 .seg{flex-basis:100%; display:flex; background:var(--surface2); border-radius:12px; padding:3px; margin-top:10px}
 .seg button{flex:1; border:0; background:none; color:var(--muted); font-weight:700; font-size:.9rem; padding:7px 0; border-radius:9px; cursor:pointer}
 .seg button[aria-selected=true]{background:var(--surface); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.12)}
@@ -316,29 +367,36 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="date" id="today"></div>
     <h1 id="appTitle">たべたもの</h1>
   </div>
-  <button class="round" id="openSettings" type="button" aria-label="設定">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-  </button>
-  <nav class="seg" id="tabs" role="tablist" aria-label="切り替え">
-    <button type="button" role="tab" data-tab="meal">食事</button><button type="button" role="tab" data-tab="gym">筋トレ</button>
-  </nav>
 </header>
 
 <main>
  <p class="syncline" id="syncline" role="status" aria-live="polite"></p>
  <div id="tabMeal">
-  <section class="hero" aria-label="きょうの合計">
+  <section class="hero" aria-label="その日の合計">
+    <div class="dayline"><b id="dayLabel">今日</b>
+      <span class="daynav"><button type="button" class="linkbtn" id="dayToday" hidden>今日に戻る</button>
+      <label class="pickday">日付を選ぶ<input type="date" id="dayPick" aria-label="見る日を選ぶ"></label></span></div>
     <div><span class="big num" id="todayKcal">0</span><span class="unit" id="todayUnit">kcal</span></div>
     <div class="meter" id="meter" hidden><i id="meterFill"></i></div>
     <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
     <div class="sub num" id="todayNuts" hidden></div>
     <div class="sub num" id="todayBurn" hidden></div>
     <div id="dayCloseBox"></div>
-    <div class="week" id="week" aria-label="直近7日間"></div>
+    <div class="week" id="week" aria-label="直近7日間（タップでその日を見る）"></div>
   </section>
 
   <section class="card ideas" id="ideas" hidden aria-label="食事の案"></section>
 
+  <div class="notice" id="setupNotice" hidden>
+    <span>APIキーを入れると、写真から料理とカロリーを読み取れます。</span>
+    <button type="button" id="setupBtn">設定する</button>
+  </div>
+
+  <div id="list"></div>
+  <p class="empty" id="empty">下の緑のボタンで食べたものを撮るか、<br>「手入力」で入れると、<br>ここに並んでいきます。</p>
+ </div>
+
+ <div id="tabBody" hidden>
   <section class="card" aria-labelledby="wTitle">
     <div class="cardhead"><h2 id="wTitle">体重</h2><button class="chip" id="wAdd" type="button">＋ 記録</button></div>
     <div class="wnow"><span class="big2 num" id="wNow">—</span><span class="unit">kg</span><span class="wdelta num" id="wDelta"></span></div>
@@ -361,13 +419,6 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <input type="file" id="bpFile" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
   </section>
 
-  <div class="notice" id="setupNotice" hidden>
-    <span>APIキーを入れると、写真から料理とカロリーを読み取れます。</span>
-    <button type="button" id="setupBtn">設定する</button>
-  </div>
-
-  <div id="list"></div>
-  <p class="empty" id="empty">下の緑のボタンで食べたものを撮るか、<br>「手入力」で入れると、<br>ここに並んでいきます。</p>
  </div>
 
  <div id="tabGym" hidden>
@@ -389,7 +440,15 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
  </div>
 </main>
 
-<div class="dock">
+<nav class="tabbar" id="tabs" aria-label="切り替え">
+  <button type="button" data-tab="meal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v8a3 3 0 0 0 6 0V3"/><path d="M7 3v18"/><path d="M17 21V3c-2 1-3 4-3 7s1 4 3 4"/></svg><span>食事</span></button>
+  <button type="button" data-tab="gym"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9v6M6 6v12M18 6v12M21 9v6M6 12h12"/></svg><span>筋トレ</span></button>
+  <button type="button" class="recbtn" id="recBtn" aria-label="記録する"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>記録</span></button>
+  <button type="button" data-tab="body"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M8 21l4-6 4 6M6 11h12"/></svg><span>からだ</span></button>
+  <button type="button" id="openSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>設定</span></button>
+</nav>
+<input type="file" id="file" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+<div class="dock" hidden>
   <button class="manual" id="manual" type="button" aria-label="写真なしで手入力して記録">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
     手入力
@@ -397,7 +456,6 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   <button class="shutter" id="shutter" type="button" aria-label="写真を撮って記録">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
   </button>
-  <input type="file" id="file" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
   <button class="gymadd" id="gAdd" type="button" hidden>＋ トレーニングを記録</button>
 </div>
 
@@ -438,6 +496,16 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <button class="btn primary" id="mSave" type="button">記録する</button>
     <button class="btn plain" id="mCancel" type="button">キャンセル</button>
     <button class="btn danger" id="mDelete" type="button" hidden>この記録を削除</button>
+  </div>
+</div>
+
+<!-- record sheet -->
+<div class="sheet" id="recSheet" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="recTitle">記録</h3>
+    <div id="recOpts"></div>
+    <button class="btn plain" id="recCancel" type="button">キャンセル</button>
   </div>
 </div>
 
@@ -502,29 +570,22 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   <div class="sheet-in">
     <div class="grab"></div>
     <h3 id="setTitle">設定</h3>
+    <p class="help" style="margin:-6px 6px 12px">変えた内容はすぐに保存されます。</p>
 
-    <div class="cap">写真の読み取り（Claude API）</div>
+    <details class="setcat" name="setcat">
+      <summary><span><b>見た目</b><small>ダーク・ライト、色</small></span></summary>
+      <div class="setbody">
     <div class="group">
-      <div class="row"><label for="sKey">APIキー</label><input id="sKey" type="password" autocomplete="off" placeholder="sk-ant-..." spellcheck="false"></div>
-      <div class="row"><label for="sModel">精度</label>
-        <select id="sModel">
-          <option value="claude-sonnet-5-5">しっかり読む（Sonnet）</option>
-          <option value="claude-haiku-5-5">速くて安い（Haiku）</option>
-        </select></div>
+      <div class="row"><label>画面の明るさ</label></div>
+      <div class="row"><div class="catseg wide" id="thSeg" role="group" aria-label="画面の明るさ"></div></div>
+      <div class="row"><label>色</label><div class="swatches" id="acSeg" role="group" aria-label="アクセントの色"></div></div>
     </div>
-    <p class="help">キーはこのスマホの中にだけ保存され、Anthropicにだけ送られます。</p>
-
-    <div class="cap">演出</div>
-    <div class="group">
-      <div class="row"><label for="sDopa">ドーパミン中毒のガキ向け演出</label><input type="checkbox" id="sDopa" class="switch" role="switch"></div>
-    </div>
-    <p class="help">ONにすると、目安カロリー以内で「確定」したときに派手な演出が出ます。効果音はマナーモードでないときだけ鳴ります。<button type="button" class="linkbtn" id="sDopaTry">演出を試す</button></p>
-
-    <div class="cap">今月の読み取り（API使用量）</div>
-    <div class="group" id="usageBox"></div>
-    <p class="help">Claudeからの返事に入っている実際のトークン数から計算しています（1ドル＝150円）。正確な請求額はAnthropic Consoleの「Cost」で確認できます。</p>
-
-    <div class="cap">からだ（1日の目安カロリーの計算）</div>
+    <p class="help">「端末に合わせる」は、iPhoneのダークモードの設定に合わせて切り替わります。</p>
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>目安カロリー</b><small>からだの情報・目標・ペース</small></span></summary>
+      <div class="setbody">
     <div class="group">
       <div class="row"><label for="pSex">性別</label>
         <select id="pSex"><option value="">選ぶ</option><option value="f">女性</option><option value="m">男性</option></select></div>
@@ -552,19 +613,64 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <p class="help">いまの体重は、記録したいちばん新しい体重を使います。計算はミフリン・セントジョー式による目安です。
       <span id="pActNote">「筋トレした分を目安に足す」がONのあいだは、運動を二重に数えないよう、ふだんの活動は自動で「ほとんど座っている」として計算します。</span></p>
 
-    <div class="cap">Googleスプレッドシート</div>
+
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>写真の読み取り</b><small>APIキー・精度</small></span></summary>
+      <div class="setbody">
+    <div class="group">
+      <div class="row"><label for="sKey">APIキー</label><input id="sKey" type="password" autocomplete="off" placeholder="sk-ant-..." spellcheck="false"></div>
+      <div class="row"><label for="sModel">精度</label>
+        <select id="sModel">
+          <option value="claude-sonnet-5-5">しっかり読む（Sonnet）</option>
+          <option value="claude-haiku-5-5">速くて安い（Haiku）</option>
+        </select></div>
+    </div>
+    <p class="help">キーはこのスマホの中にだけ保存され、Anthropicにだけ送られます。</p>
+
+
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>API使用量</b><small>今月・先月の読み取りの料金</small></span></summary>
+      <div class="setbody">
+    <div class="group" id="usageBox"></div>
+    <p class="help">Claudeからの返事に入っている実際のトークン数から計算しています（1ドル＝150円）。正確な請求額はAnthropic Consoleの「Cost」で確認できます。</p>
+
+
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>Googleスプレッドシート</b><small>連携URL・合言葉・読み込み</small></span></summary>
+      <div class="setbody">
     <div class="group">
       <div class="row"><label for="sUrl">連携URL</label><input id="sUrl" type="url" placeholder="https://script.google.com/..." spellcheck="false" autocomplete="off"></div>
       <div class="row"><label for="sToken">合言葉</label><input id="sToken" type="password" autocomplete="off" placeholder="Apps Scriptと同じもの"></div>
     </div>
     <p class="help">写真はGoogleドライブの「たべたもの記録の写真」フォルダに保存されます。設定のしかたは同じフォルダの README.md を見てください。</p>
 
-    <button class="btn primary" id="sSave" type="button">保存する</button>
     <button class="btn plain" id="sTest" type="button">スプレッドシートとの接続を確認</button>
     <button class="btn plain" id="sImport" type="button">スプレッドシートから記録を読み込む</button>
     <div class="status" id="sStatus"></div>
 
-    <div class="cap">引っ越し（Safari → ホーム画面、機種変更）</div>
+
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>演出</b><small>ドーパミン中毒のガキ向け演出</small></span></summary>
+      <div class="setbody">
+    <div class="group">
+      <div class="row"><label for="sDopa">ドーパミン中毒のガキ向け演出</label><input type="checkbox" id="sDopa" class="switch" role="switch"></div>
+    </div>
+    <p class="help">ONにすると、目安カロリー以内で「確定」したときに派手な演出が出ます。効果音はマナーモードでないときだけ鳴ります。<button type="button" class="linkbtn" id="sDopaTry">演出を試す</button></p>
+
+
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>引っ越し</b><small>Safari → ホーム画面、機種変更</small></span></summary>
+      <div class="setbody">
     <button class="btn plain" id="mvCopy" type="button" style="margin-top:0">引っ越し用にコピー</button>
     <button class="btn plain" id="mvPaste" type="button">貼り付けて取り込む</button>
     <div class="group" id="mvBox" hidden style="margin-top:12px">
@@ -574,6 +680,9 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="status" id="mvStatus"></div>
     <p class="help">移す前の画面で「引っ越し用にコピー」→ 移した先で「貼り付けて取り込む」。設定（APIキーなど）と、写真を含む記録がそのまま移ります。</p>
 
+
+      </div>
+    </details>
     <button class="btn plain" id="sClose" type="button">閉じる</button>
   </div>
 </div>
@@ -679,98 +788,101 @@ function plan(){
 }
 
 /* ---------- render ---------- */
+// 食事タブで見ている日（週の棒や「日付を選ぶ」で切り替える。開いたときは今日）
+let selDay = dayKey(Date.now());
+const dayLabel = (k, tk) => {
+  if (k === tk) return "今日";
+  const y = new Date(dms(tk)); y.setDate(y.getDate() - 1);
+  if (k === dayKey(y.getTime())) return "昨日";
+  const d = new Date(dms(k)); return `${d.getMonth() + 1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
+};
 function render(){
   const now = new Date();
   $("today").textContent = `${now.getMonth()+1}月${now.getDate()}日（${WEEK[now.getDay()]}）`;
   const byDay = new Map();
   for (const m of meals){ const k = dayKey(m.eatenAt); (byDay.get(k) || byDay.set(k, []).get(k)).push(m); }
   const tk = dayKey(now.getTime());
-  const todays = byDay.get(tk) || [];
-  const tTotal = todays.reduce((s, m) => s + (m.total || 0), 0);
+  if (selDay > tk) selDay = tk;
+  const isToday = selDay === tk;
+  const dayMeals = byDay.get(selDay) || [];
+  const tTotal = dayMeals.reduce((s, m) => s + (m.total || 0), 0);
+  $("dayLabel").textContent = dayLabel(selDay, tk);
+  $("dayToday").hidden = isToday;
+  $("dayPick").value = selDay; $("dayPick").max = tk;
   $("todayKcal").textContent = fmt(tTotal);
-  const pl = plan(), tgt = targetFor(tk, pl);
+  const pl = plan(), tgt = targetFor(selDay, pl);
   $("todayUnit").textContent = pl ? ` / ${fmt(tgt)} kcal` : "kcal";
   $("meter").hidden = !pl;
-  const nMeals = new Set(todays.map(mealCat)).size; // 朝食・昼食・夕食・間食それぞれを1食と数える
-  let sub = todays.length ? `${nMeals}食` : "きょうはまだ記録がありません";
+  const nMeals = new Set(dayMeals.map(mealCat)).size; // 朝食・昼食・夕食・間食それぞれを1食と数える
+  let sub = dayMeals.length ? `${nMeals}食` : (isToday ? "きょうはまだ記録がありません" : "この日の記録はありません");
   if (pl){
     const left = tgt - tTotal;
     $("meterFill").style.width = `${Math.min(100, tTotal / tgt * 100)}%`;
     $("meter").classList.toggle("over", left < 0);
-    sub = (left >= 0 ? `あと ${fmt(left)} kcal` : `${fmt(-left)} kcal オーバー`) + (todays.length ? `・${nMeals}食` : "");
+    sub = (left >= 0 ? `${isToday ? "あと" : "残り"} ${fmt(left)} kcal` : `${fmt(-left)} kcal オーバー`) + (dayMeals.length ? `・${nMeals}食` : "");
   }
   $("todaySub").textContent = sub;
-  const tb = workouts.filter(g => dayKey(g.at) === tk).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
+  const tb = workouts.filter(g => dayKey(g.at) === selDay).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
   $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${!pl ? "" : settings.profile.addBurn ? "（目安に足しています）" : "（目安カロリーには含めていません）"}` : "";
   $("todayBurn").hidden = !tb;
-  renderWeight(pl);
+  renderWeight(plan());
   renderClose();
   renderBodyPhotos();
-  renderIdeas(todays, pl ? tgt - tTotal : null);
-  const tn = nutLine(todays.flatMap(m => m.items || []));
+  renderIdeas(dayMeals, pl && isToday ? tgt - tTotal : null); // 食事の案は今日だけ
+  const tn = nutLine(dayMeals.flatMap(m => m.items || []));
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
 
-  // week bars
+  // 週の棒：タップでその日を見る（選んだ日が7日より前なら、その日までの7日）
+  const end = selDay < dayKey(now.getTime() - 6 * 864e5) ? new Date(dms(selDay)) : now;
   const days = [];
-  for (let i = 6; i >= 0; i--){ const d = new Date(now); d.setDate(now.getDate() - i); d.setHours(12,0,0,0); days.push(d); }
+  for (let i = 6; i >= 0; i--){ const d = new Date(end); d.setDate(end.getDate() - i); d.setHours(12,0,0,0); days.push(d); }
   const totals = days.map(d => (byDay.get(dayKey(d.getTime())) || []).reduce((s, m) => s + (m.total || 0), 0));
   const max = Math.max(1, ...totals);
   const wk = $("week"); wk.textContent = "";
   days.forEach((d, i) => {
-    const c = document.createElement("div"); c.className = "col" + (i === 6 ? " today" : "");
-    const b = document.createElement("div"); b.className = "bar"; b.style.height = `${Math.max(6, Math.round(totals[i] / max * 60))}px`;
-    const l = document.createElement("div"); l.className = "d"; l.textContent = i === 6 ? "今日" : WEEK[d.getDay()];
-    c.title = `${d.getMonth()+1}/${d.getDate()} ${fmt(totals[i])}kcal`;
-    c.append(b, l); wk.append(c);
+    const k = dayKey(d.getTime());
+    const c = el("button", "col" + (k === selDay ? " sel" : "") + (k === tk ? " today" : "")); c.type = "button";
+    const b = el("div", "bar"); b.style.height = `${Math.max(6, Math.round(totals[i] / max * 60))}px`;
+    c.append(b, el("div", "d", k === tk ? "今日" : `${WEEK[d.getDay()]}`));
+    c.setAttribute("aria-label", `${d.getMonth()+1}月${d.getDate()}日 ${fmt(totals[i])}kcal`);
+    c.setAttribute("aria-pressed", String(k === selDay));
+    c.addEventListener("click", () => { selDay = k; render(); });
+    wk.append(c);
   });
 
-  // list
+  // その日の記録だけを、区分ごとに並べる
   const list = $("list"); list.textContent = "";
-  const keys = [...byDay.keys()].sort().reverse();
-  $("empty").hidden = keys.length > 0;
-  const yk = (() => { const y = new Date(now); y.setDate(now.getDate() - 1); return dayKey(y.getTime()); })();
-  for (const k of keys){
-    const arr = byDay.get(k).sort((a, b) => b.eatenAt - a.eatenAt);
-    const d = new Date(arr[0].eatenAt);
-    const sec = document.createElement("section"); sec.className = "day";
-    const h = document.createElement("div"); h.className = "dayhead";
-    const h2 = document.createElement("h2");
-    h2.textContent = k === tk ? "今日" : k === yk ? "昨日" : `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
-    const s = document.createElement("span"); s.className = "sum num";
-    s.textContent = `${fmt(arr.reduce((t, m) => t + (m.total || 0), 0))} kcal・${new Set(arr.map(mealCat)).size}食`;
-    const cl = readClosed()[k];
-    if (cl) h2.append(el("span", "badge" + (cl.ok === false ? " over" : ""), "確定"));
-    else if (k !== tk){ const cb = el("button", "chip small", "確定する"); cb.type = "button"; cb.addEventListener("click", () => closeDay(k)); h2.append(cb); }
-    h.append(h2, s);
-    sec.append(h);
+  $("empty").hidden = dayMeals.length > 0;
+  $("empty").textContent = isToday ? "下の「＋ 記録」から、写真を撮るか手で入力すると、ここに並んでいきます。" : "この日の記録はありません。下の「＋ 記録」から、この日の分を入れることもできます。";
+  const arr = dayMeals.sort((a, b) => b.eatenAt - a.eatenAt);
+  if (arr.length){
+    const sec = el("section", "day");
     for (const cat of CATS){
-    const inCat = arr.filter(m => mealCat(m) === cat);
-    if (!inCat.length) continue;
-    const ch = el("div", "cathead"); ch.append(el("span", null, cat), el("span", "num", `${fmt(inCat.reduce((t, m) => t + (m.total || 0), 0))} kcal`));
-    const g = document.createElement("div"); g.className = "grid";
-    for (const m of inCat){
-      const b = document.createElement("button"); b.type = "button"; b.className = "tile";
-      const ph = document.createElement("div"); ph.className = "ph";
-      if (m.thumb){ const im = document.createElement("img"); im.src = m.thumb; im.alt = ""; im.loading = "lazy"; ph.append(im); }
-      else { const n = document.createElement("div"); n.className = "noimg"; n.textContent = "🍽"; ph.append(n); }
-      const md = new Date(m.eatenAt);
-      const t = document.createElement("span"); t.className = "pill t num"; t.textContent = `${md.getHours()}:${pad(md.getMinutes())}`;
-      const kc = document.createElement("span"); kc.className = "pill k num"; kc.textContent = `${fmt(m.total)} kcal`;
-      ph.append(t, kc);
-      if (pendingIds().has(m.id)){ const p = document.createElement("span"); p.className = "pending"; p.title = "スプレッドシート未反映"; ph.append(p); }
-      const nm = document.createElement("div"); nm.className = "nm";
-      nm.textContent = (m.items || []).map(i => i.name).filter(Boolean).join("、") || "（品目なし）";
-      b.append(ph, nm);
-      b.addEventListener("click", () => openMeal(structuredClone(m), false));
-      g.append(b);
-    }
-    sec.append(ch, g);
+      const inCat = arr.filter(m => mealCat(m) === cat);
+      if (!inCat.length) continue;
+      const ch = el("div", "cathead"); ch.append(el("span", null, cat), el("span", "num", `${fmt(inCat.reduce((t, m) => t + (m.total || 0), 0))} kcal`));
+      const g = el("div", "grid");
+      for (const m of inCat){
+        const b = el("button", "tile"); b.type = "button";
+        const ph = el("div", "ph");
+        if (m.thumb){ const im = el("img"); im.src = m.thumb; im.alt = ""; im.loading = "lazy"; ph.append(im); }
+        else ph.append(el("div", "noimg", "🍽"));
+        const md = new Date(m.eatenAt);
+        ph.append(el("span", "pill t num", `${md.getHours()}:${pad(md.getMinutes())}`), el("span", "pill k num", `${fmt(m.total)} kcal`));
+        if (pendingIds().has(m.id)){ const p = el("span", "pending"); p.title = "スプレッドシート未反映"; ph.append(p); }
+        b.append(ph, el("div", "nm", (m.items || []).map(i => i.name).filter(Boolean).join("、") || "（品目なし）"));
+        b.addEventListener("click", () => openMeal(structuredClone(m), false));
+        g.append(b);
+      }
+      sec.append(ch, g);
     }
     list.append(sec);
   }
   $("setupNotice").hidden = !!settings.key;
   renderGym();
 }
+$("dayPick").addEventListener("change", () => { if ($("dayPick").value){ selDay = $("dayPick").value; render(); } });
+$("dayToday").addEventListener("click", () => { selDay = dayKey(Date.now()); render(); });
 
 /* ---------- 体重カード ---------- */
 const DAY = 864e5, WEEK_MS = 7 * DAY;
@@ -1572,7 +1684,9 @@ $("mCancel").addEventListener("click", hide);
 
 $("shutter").addEventListener("click", () => { $("file").value = ""; $("file").click(); });
 $("manual").addEventListener("click", () => {
-  openMeal({ id:newId(), eatenAt:Date.now(), items:[blank()], total:0, thumb:"", comment:"" }, true);
+  let at = Date.now();
+  if (selDay !== dayKey(at)){ const d = new Date(dms(selDay)), n = new Date(); d.setHours(n.getHours(), n.getMinutes(), 0, 0); at = d.getTime(); }
+  openMeal({ id:newId(), eatenAt:at, items:[blank()], total:0, thumb:"", comment:"" }, true);
   $("mItems").querySelector("input")?.focus();
 });
 $("file").addEventListener("change", async () => {
@@ -1663,16 +1777,16 @@ $("mDelete").addEventListener("click", async () => {
 
 /* ---------- タブ（食事／筋トレ） ---------- */
 let tab = "meal";
-try { tab = localStorage.getItem("foodlog.tab") === "gym" ? "gym" : "meal"; } catch {}
+try { tab = ["gym", "body"].includes(localStorage.getItem("foodlog.tab")) ? localStorage.getItem("foodlog.tab") : "meal"; } catch {}
 function setTab(t){
   tab = t; try { localStorage.setItem("foodlog.tab", t); } catch {}
-  $("tabMeal").hidden = t !== "meal"; $("tabGym").hidden = t !== "gym";
-  for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.tab === t));
-  $("appTitle").textContent = t === "gym" ? "筋トレ" : "たべたもの";
+  $("tabMeal").hidden = t !== "meal"; $("tabGym").hidden = t !== "gym"; $("tabBody").hidden = t !== "body";
+  for (const b of $("tabs").querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", String(b.dataset.tab === t));
+  $("appTitle").textContent = { gym:"筋トレ", body:"からだ" }[t] || "たべたもの";
   $("manual").hidden = $("shutter").hidden = t !== "meal"; $("gAdd").hidden = t !== "gym";
   window.scrollTo(0, 0);
 }
-$("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
+$("tabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
 
 /* ---------- 筋トレ ---------- */
 // 種目名|よみ（候補用）
@@ -1977,13 +2091,13 @@ function closeDay(k){
 }
 function unclose(k){ const c = readClosed(); delete c[k]; writeClosed(c); render(); }
 function renderClose(){
-  const k = dayKey(Date.now()), c = readClosed()[k], kcal = dayTotal(k), box = $("dayCloseBox"); box.textContent = "";
+  const k = selDay, isToday = k === dayKey(Date.now()), c = readClosed()[k], kcal = dayTotal(k), box = $("dayCloseBox"); box.textContent = "";
   if (c && c.kcal === kcal){
-    const t = el("div", "closed num", `✓ 今日は ${fmt(c.kcal)} kcal で確定済み${c.ok === true ? "（目安以内）" : c.ok === false ? "（目安オーバー）" : ""}`);
+    const t = el("div", "closed num", `✓ ${isToday ? "今日" : "この日"}は ${fmt(c.kcal)} kcal で確定済み${c.ok === true ? "（目安以内）" : c.ok === false ? "（目安オーバー）" : ""}`);
     const u = el("button", "linkbtn", "取り消す"); u.type = "button"; u.addEventListener("click", () => unclose(k));
     t.append(u); box.append(t);
   } else {
-    const b = el("button", "confirmbtn", c ? "記録が変わりました。もう一度確定する" : "今日の摂取カロリーを確定する"); b.type = "button";
+    const b = el("button", "confirmbtn", c ? "記録が変わりました。もう一度確定する" : `${isToday ? "今日" : "この日"}の摂取カロリーを確定する`); b.type = "button";
     b.disabled = !meals.some(m => dayKey(m.eatenAt) === k);
     b.addEventListener("click", () => closeDay(k));
     box.append(b);
@@ -2321,6 +2435,66 @@ $("bpDel").addEventListener("click", async () => {
   if (bpOf(p.kind).length) openBpView(p.kind, Math.max(0, i - 1));
 });
 
+/* ---------- 下の「＋ 記録」：タブに合わせて選べるようにする ---------- */
+const REC_OPTS = {
+  meal:[["📷", "写真を撮って記録", "Claudeで料理とカロリーを読み取れます", () => $("shutter").click()],
+        ["✏️", "手で入力", "写真なし・AIなしで入力します", () => $("manual").click()]],
+  gym:[["🏋️", "トレーニングを記録", "種目・重さ・回数を入れます", () => $("gAdd").click()]],
+  body:[["⚖️", "体重を記録", "", () => $("wAdd").click()],
+        ["📷", "顔・体の写真を撮る", "", () => $("bpAdd").click()]]
+};
+$("recBtn").addEventListener("click", () => {
+  const opts = REC_OPTS[tab] || REC_OPTS.meal;
+  if (opts.length === 1) return opts[0][3](); // 1つしかなければそのまま開く
+  const box = $("recOpts"); box.textContent = "";
+  for (const [icon, title, sub, go] of opts){
+    const b = el("button", "recopt"); b.type = "button";
+    const t = el("span", "rt"); t.append(el("b", null, title)); if (sub) t.append(el("small", null, sub));
+    b.append(el("span", "ri", icon), t);
+    b.addEventListener("click", () => { hide(); go(); }); // カメラはタップの中で開く必要があるので、そのまま呼ぶ
+    box.append(b);
+  }
+  $("recTitle").textContent = { meal:"食事を記録", body:"からだを記録" }[tab] || "記録";
+  show($("recSheet"));
+});
+$("recCancel").addEventListener("click", hide);
+
+/* ---------- 見た目：ダーク／ライトとアクセントの色 ---------- */
+const ACCENTS = {
+  mint:["ミント", "#1FA874", "#3DD39A"], blue:["ブルー", "#2F7DF6", "#5AA2FF"], orange:["オレンジ", "#E06A1B", "#FF9A4D"],
+  pink:["ピンク", "#D9417A", "#FF79AA"], purple:["パープル", "#7A4FD8", "#A98BFF"], red:["レッド", "#D93A3A", "#FF6B6B"]
+};
+const darkMQ = matchMedia("(prefers-color-scheme: dark)");
+function applyTheme(){
+  const t = settings.theme || "auto", root = document.documentElement;
+  if (t === "auto") root.removeAttribute("data-theme"); else root.dataset.theme = t;
+  const dark = t === "dark" || (t === "auto" && darkMQ.matches);
+  const [, light, darkC] = ACCENTS[settings.accent] || ACCENTS.mint;
+  const a = dark ? darkC : light;
+  root.style.setProperty("--accent", a);
+  root.style.setProperty("--accent-soft", `color-mix(in srgb, ${a} ${dark ? 22 : 16}%, ${dark ? "#0E1110" : "#FFFFFF"})`);
+  root.style.setProperty("--accent-ink", dark ? "#06130D" : "#FFFFFF");
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = dark ? "#0E1110" : "#F6F7F4";
+}
+darkMQ.addEventListener?.("change", applyTheme);
+function renderLook(){
+  const tb = $("thSeg"); tb.textContent = "";
+  for (const [v, label] of [["auto", "端末に合わせる"], ["light", "ライト"], ["dark", "ダーク"]]){
+    const b = el("button", null, label); b.type = "button"; b.setAttribute("aria-pressed", String((settings.theme || "auto") === v));
+    b.addEventListener("click", () => { settings.theme = v; saveSettings(); applyTheme(); renderLook(); });
+    tb.append(b);
+  }
+  const cs = $("acSeg"); cs.textContent = "";
+  for (const [k, [label, light, dark]] of Object.entries(ACCENTS)){
+    const b = el("button", "swatch"); b.type = "button"; b.setAttribute("aria-label", label);
+    b.setAttribute("aria-pressed", String((settings.accent || "mint") === k));
+    b.style.background = `linear-gradient(135deg, ${light} 50%, ${dark} 50%)`;
+    b.addEventListener("click", () => { settings.accent = k; saveSettings(); applyTheme(); renderLook(); });
+    cs.append(b);
+  }
+}
+applyTheme();
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -2387,7 +2561,7 @@ const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoa
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  renderUsage(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn; syncAct();
+  renderUsage(); renderLook(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn; syncAct();
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
@@ -2401,7 +2575,8 @@ function grab(){
   saveSettings();
 }
 for (const id of Object.keys(PFIELDS)) $(id).addEventListener("change", () => { grab(); render(); });
-$("sSave").addEventListener("click", () => { grab(); setStatus($("sStatus"), "保存しました。"); render(); sendOldPhotos().then(sendOldBody).then(flush); });
+for (const id of ["sKey", "sModel"]) $(id).addEventListener("change", () => { grab(); render(); });
+for (const id of ["sUrl", "sToken"]) $(id).addEventListener("change", () => { grab(); render(); sendOldPhotos().then(sendOldBody).then(flush); });
 $("sTest").addEventListener("click", async () => {
   grab();
   if (!settings.url) return setStatus($("sStatus"), "連携URLを入れてください。", "err");
