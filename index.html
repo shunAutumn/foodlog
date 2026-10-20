@@ -219,6 +219,19 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 @keyframes fx-flash{0%{opacity:0} 15%{opacity:.85} 100%{opacity:0}}
 @keyframes fx-shake{0%,100%{transform:none} 20%{transform:translate(-8px,4px)} 40%{transform:translate(7px,-5px)} 60%{transform:translate(-5px,-3px)} 80%{transform:translate(4px,5px)}}
 @media (prefers-reduced-motion: reduce){.fx-rays,.fx-lines{animation:none}}
+/* 食事の案 */
+.ideas .ideahead{font-weight:800; font-size:.95rem; margin-bottom:8px}
+.ideas .ideahead b{font-size:1.15rem}
+.ideas .muted{color:var(--muted); font-size:.85rem}
+.idea{display:grid; grid-template-columns:1fr auto; gap:2px 10px; width:100%; text-align:left; border:0; border-radius:14px; background:var(--surface2); padding:10px 12px; margin-top:8px; cursor:pointer}
+.idea .ideat{display:flex; align-items:center; gap:6px; min-width:0}
+.idea .ideaname{font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.idea .src{font-size:.65rem; font-weight:800; color:var(--accent); border:1.5px solid currentColor; border-radius:6px; padding:0 4px; flex:none}
+.idea .tagp{font-size:.62rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:0 4px; flex:none}
+.idea .ideak{grid-row:1 / span 2; grid-column:2; align-self:center; font-weight:800}
+.idea .ideameta{font-size:.78rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ideas .linkbtn{margin-top:10px; padding-left:2px}
+.plan .warn{color:var(--label); font-size:.82rem; margin-top:4px}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
 .cmp{display:grid; gap:10px; margin-top:12px}
@@ -310,6 +323,8 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div id="dayCloseBox"></div>
     <div class="week" id="week" aria-label="直近7日間"></div>
   </section>
+
+  <section class="card ideas" id="ideas" hidden aria-label="食事の案"></section>
 
   <section class="card" aria-labelledby="wTitle">
     <div class="cardhead"><h2 id="wTitle">体重</h2><button class="chip" id="wAdd" type="button">＋ 記録</button></div>
@@ -490,7 +505,11 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
           <option value="0.75">はやめ（週0.75kg）</option>
         </select></div>
     </div>
-    <p class="help">いまの体重は、記録したいちばん新しい体重を使います。計算はミフリン・セントジョー式による目安です。</p>
+    <div class="group" style="margin-top:12px">
+      <div class="row"><label for="pBurn">筋トレした分を目安に足す</label><input type="checkbox" id="pBurn" class="switch" role="switch"></div>
+    </div>
+    <p class="help">いまの体重は、記録したいちばん新しい体重を使います。計算はミフリン・セントジョー式による目安です。
+      「筋トレした分を目安に足す」をONにするときは、ふだんの活動を「ほとんど座っている」にしてください（運動を二重に数えないため）。</p>
 
     <div class="cap">Googleスプレッドシート</div>
     <div class="group">
@@ -619,23 +638,24 @@ function render(){
   const todays = byDay.get(tk) || [];
   const tTotal = todays.reduce((s, m) => s + (m.total || 0), 0);
   $("todayKcal").textContent = fmt(tTotal);
-  const pl = plan();
-  $("todayUnit").textContent = pl ? ` / ${fmt(pl.target)} kcal` : "kcal";
+  const pl = plan(), tgt = targetFor(tk, pl);
+  $("todayUnit").textContent = pl ? ` / ${fmt(tgt)} kcal` : "kcal";
   $("meter").hidden = !pl;
   const nMeals = new Set(todays.map(mealCat)).size; // 朝食・昼食・夕食・間食それぞれを1食と数える
   let sub = todays.length ? `${nMeals}食` : "きょうはまだ記録がありません";
   if (pl){
-    const left = pl.target - tTotal;
-    $("meterFill").style.width = `${Math.min(100, tTotal / pl.target * 100)}%`;
+    const left = tgt - tTotal;
+    $("meterFill").style.width = `${Math.min(100, tTotal / tgt * 100)}%`;
     $("meter").classList.toggle("over", left < 0);
     sub = (left >= 0 ? `あと ${fmt(left)} kcal` : `${fmt(-left)} kcal オーバー`) + (todays.length ? `・${nMeals}食` : "");
   }
   $("todaySub").textContent = sub;
   const tb = workouts.filter(g => dayKey(g.at) === tk).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
-  $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${pl ? "（目安カロリーには含めていません）" : ""}` : "";
+  $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${!pl ? "" : settings.profile.addBurn ? "（目安に足しています）" : "（目安カロリーには含めていません）"}` : "";
   $("todayBurn").hidden = !tb;
   renderWeight(pl);
   renderClose();
+  renderIdeas(todays, pl ? tgt - tTotal : null);
   const tn = nutLine(todays.flatMap(m => m.items || []));
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
 
@@ -768,12 +788,14 @@ function renderWeight(pl){
     return;
   }
   const head = el("div"); head.append("1日の目安 ", el("b", "num", fmt(pl.target)), " kcal");
+  if (settings.profile.addBurn) head.append(el("span", "muted", "＋筋トレした日はその分"));
   const pace = pl.floored ? `約${(Math.round(pl.pace * 20) / 20).toFixed(2).replace(/0$/, "")}` : settings.profile.pace;
   const why = pl.dir < 0 ? `週${pace}kgずつ減らすペース` : pl.dir > 0 ? `週${pace}kgずつ増やすペース` : "今の体重を保つ量";
   const d1 = el("div", "muted", `${why}${pl.dir ? `・目標まで約${Math.max(1, Math.round(pl.weeks))}週間` : ""}`);
   const d2 = el("div", "muted", `基礎代謝 ${fmt(pl.bmr)} kcal・TDEE（1日の消費）${fmt(pl.tdee)} kcal`);
   box.append(head, d1, d2);
   if (pl.floored) box.append(el("div", "muted", "体に負担がないよう、基礎代謝を下回らない量にしています。"));
+  if (settings.profile.addBurn && Number(settings.profile.act) > 1.2) box.append(el("div", "warn", "筋トレ分を足す設定なので、ふだんの活動は「ほとんど座っている」にすると二重に数えずにすみます。"));
 }
 
 // 日＝1日ごと／週・月・年＝その期間の平均。少し先まで表示して、目安の線の行き先も見えるようにする
@@ -1918,7 +1940,7 @@ const readClosed = () => { try { return JSON.parse(localStorage.getItem(CKEY) ||
 const writeClosed = c => { try { localStorage.setItem(CKEY, JSON.stringify(c)); } catch {} };
 const dayTotal = k => meals.filter(m => dayKey(m.eatenAt) === k).reduce((s, m) => s + (m.total || 0), 0);
 function closeDay(k){
-  const kcal = dayTotal(k), pl = plan(), target = pl ? pl.target : null, ok = target ? kcal <= target : null;
+  const kcal = dayTotal(k), target = targetFor(k), ok = target ? kcal <= target : null;
   const c = readClosed(); c[k] = { kcal, target, ok, at:Date.now() }; writeClosed(c);
   render();
   const label = k === dayKey(Date.now()) ? "今日" : `${Number(k.slice(5, 7))}月${Number(k.slice(8))}日`;
@@ -2054,6 +2076,110 @@ function buildPachinko(ctx, dest, t0, n, step, samples){
 $("sDopa").addEventListener("change", () => { settings.dopamine = $("sDopa").checked; saveSettings(); if (settings.dopamine) try { loadSfx(); } catch {} });
 $("sDopaTry").addEventListener("click", () => { const pl = plan(); hide(); kakutei(pl ? Math.round(pl.target * 0.9) : 1500, pl ? pl.target : 1700); });
 
+/* ---------- 筋トレ分を目安に足す ---------- */
+const burnOn = k => workouts.filter(g => dayKey(g.at) === k).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
+// その日の目安（設定がONなら、その日の筋トレの消費を足す）
+function targetFor(k, pl = plan()){
+  if (!pl) return null;
+  return pl.target + (settings.profile.addBurn ? burnOn(k) : 0);
+}
+$("pBurn").addEventListener("change", () => { settings.profile.addBurn = $("pBurn").checked; saveSettings(); render(); });
+
+/* ---------- 残りのカロリーで食べられそうな食事の案（AIなし） ---------- */
+// 定番の組み合わせ。品目は目安表 FOODS の「名前|量のめやす」で引く
+const COMBOS = [
+  ["和朝食", ["朝食"], ["ご飯|茶碗1杯", "味噌汁|1杯", "納豆|1パック", "卵焼き|2切れ"]],
+  ["卵かけご飯と味噌汁", ["朝食"], ["卵かけご飯|1杯", "味噌汁|1杯"]],
+  ["トーストと目玉焼き", ["朝食"], ["バタートースト|6枚切り1枚", "目玉焼き|1個", "牛乳|コップ1杯"]],
+  ["ヨーグルトボウル", ["朝食", "間食"], ["ギリシャヨーグルト|1個", "バナナ|1本", "グラノーラ|1食"]],
+  ["プロテイン朝食", ["朝食"], ["プロテイン|1杯", "バナナ|1本", "ゆで卵|1個"]],
+  ["おにぎりとゆで卵", ["朝食", "昼食"], ["おにぎり（鮭）|1個", "ゆで卵|1個", "味噌汁|1杯"]],
+  ["ざるそばとゆで卵", ["昼食"], ["ざるそば|1枚", "ゆで卵|1個"]],
+  ["おにぎり2個とサラダチキン", ["昼食"], ["おにぎり（鮭）|1個", "おにぎり（梅）|1個", "サラダチキン|1個"]],
+  ["サラダチキンのサラダとおにぎり", ["昼食", "夕食"], ["サラダチキン|1個", "野菜サラダ|ドレッシングあり", "おにぎり（鮭）|1個"]],
+  ["親子丼", ["昼食", "夕食"], ["親子丼|1杯"]],
+  ["牛丼とサラダ", ["昼食", "夕食"], ["牛丼|並盛", "野菜サラダ|ドレッシングあり"]],
+  ["かけうどんとおにぎり", ["昼食"], ["かけうどん|1杯", "おにぎり（梅）|1個"]],
+  ["海鮮丼と味噌汁", ["昼食", "夕食"], ["海鮮丼|1杯", "味噌汁|1杯"]],
+  ["鮭定食", ["夕食", "昼食"], ["ご飯|茶碗1杯", "焼き鮭|1切れ", "味噌汁|1杯", "ほうれん草のおひたし|小鉢"]],
+  ["生姜焼き定食", ["夕食", "昼食"], ["ご飯|茶碗1杯", "生姜焼き|1人前", "野菜サラダ|ドレッシングあり", "味噌汁|1杯"]],
+  ["鶏むね肉定食", ["夕食", "昼食"], ["ご飯|茶碗1杯", "鶏むね肉（皮なし）|100g", "野菜サラダ|ドレッシングあり", "味噌汁|1杯"]],
+  ["刺身定食", ["夕食"], ["ご飯|茶碗1杯", "刺身|盛り合わせ", "味噌汁|1杯", "冷奴|1/3丁"]],
+  ["麻婆豆腐定食", ["夕食"], ["ご飯|茶碗1杯", "麻婆豆腐|1人前", "野菜サラダ|ドレッシングあり"]],
+  ["ハンバーグ定食", ["夕食"], ["ご飯|茶碗1杯", "ハンバーグ|1個", "野菜サラダ|ドレッシングあり", "味噌汁|1杯"]],
+  ["肉じゃが定食", ["夕食"], ["ご飯|茶碗1杯", "肉じゃが|1人前", "味噌汁|1杯"]],
+  ["豚汁と納豆ご飯", ["夕食", "朝食"], ["ご飯|茶碗1杯", "豚汁|1杯", "納豆|1パック"]],
+  ["焼き鳥と枝豆と冷奴", ["夕食"], ["焼き鳥|2本", "枝豆|小皿", "冷奴|1/3丁"]],
+  ["軽めの夕食（ご飯なし）", ["夕食"], ["サラダチキン|1個", "野菜サラダ|ドレッシングあり", "冷奴|1/3丁", "味噌汁|1杯"]],
+  ["ギリシャヨーグルト", ["間食"], ["ギリシャヨーグルト|1個"]],
+  ["プロテイン", ["間食"], ["プロテイン|1杯"]],
+  ["バナナ", ["間食"], ["バナナ|1本"]],
+  ["ゆで卵", ["間食"], ["ゆで卵|1個"]],
+  ["アーモンド", ["間食"], ["アーモンド|10粒"]],
+  ["プロテインバー", ["間食"], ["プロテインバー|1本"]],
+  ["りんご", ["間食"], ["りんご|1/2個"]],
+  ["おにぎり（梅）", ["間食"], ["おにぎり（梅）|1個"]]
+].map(([name, cats, refs]) => {
+  const items = refs.map(r => { const [n, note] = r.split("|"); return FOODS.find(f => f.name === n && f.note === note); }).filter(Boolean);
+  return { name, cats, items:items.map(f => ({ name:f.name, g:f.g, kcal:f.kcal, source:"estimate" })), kcal:items.reduce((s, f) => s + f.kcal, 0), src:"定番" };
+}).filter(c => c.items.length);
+const PROTEIN = /サラダチキン|鶏むね|ささみ|刺身|鮭|プロテイン|ゆで卵|納豆|ギリシャ|冷奴/;
+let ideaShift = 0;
+function nextCat(todays){
+  const done = new Set(todays.map(mealCat)), now = catOf(Date.now());
+  if (now === "間食") return new Date().getHours() < 4 || new Date().getHours() >= 22 ? "間食" : (done.has("夕食") ? "間食" : "夕食");
+  // 今の時間帯の食事を食べ終えていたら、次の食事
+  const order = ["朝食", "昼食", "夕食"], i = order.indexOf(now);
+  if (!done.has(now)) return now;
+  return order[i + 1] || "間食";
+}
+function renderIdeas(todays, left){
+  const box = $("ideas"); box.textContent = "";
+  box.hidden = left == null;
+  if (left == null) return;
+  if (left < 60){
+    box.append(el("div", "ideahead", left < 0 ? "今日は目安を超えています" : "今日はほぼ目安どおりです"),
+      el("div", "muted", left < 0 ? "食べるなら、水やお茶、ゼロカロリーの飲み物にしておきましょう。" : "このあと食べるなら、ゼロカロリーの飲み物くらいにしておきましょう。"));
+    return;
+  }
+  const cat = left < 250 ? "間食" : nextCat(todays);
+  // その区分で1回に使う量のめやす（あとの食事の分を残す）
+  const fill = cat === "朝食" ? left * 0.3 : cat === "昼食" ? left * 0.5 : cat === "夕食" ? left * 0.95 : Math.min(left, 250);
+  // 自分が前に食べた同じ区分の食事（30日以内・品目の組み合わせごとに1つ）
+  const seen = new Set(), past = [];
+  for (const m of [...meals].sort((a, b) => b.eatenAt - a.eatenAt)){
+    if (Date.now() - m.eatenAt > 30 * 864e5 || mealCat(m) !== cat || !(m.total > 0)) continue;
+    const key = (m.items || []).map(i => i.name).join("、"); if (!key || seen.has(key)) continue;
+    seen.add(key); past.push({ name:key, cats:[cat], items:(m.items || []).map(i => ({ ...i })), kcal:m.total, src:"前に食べた" });
+  }
+  const pool = [...past.slice(0, 8), ...COMBOS.filter(c => c.cats.includes(cat))].filter(c => c.kcal <= left);
+  pool.sort((a, b) => Math.abs(a.kcal - fill) - Math.abs(b.kcal - fill));
+  const head = el("div", "ideahead");
+  head.append(`${cat}に：残り `, el("b", "num", `${fmt(left)}`), " kcal で食べられそう");
+  box.append(head);
+  if (!pool.length){ box.append(el("div", "muted", "ちょうどいい案が見つかりませんでした。少なめの間食にしておきましょう。")); return; }
+  const n = Math.min(3, pool.length), start = (ideaShift * 3) % pool.length;
+  for (let i = 0; i < n; i++){
+    const c = pool[(start + i) % pool.length];
+    const b = el("button", "idea"); b.type = "button";
+    const t = el("div", "ideat");
+    t.append(el("span", "src", c.src), el("span", "ideaname", c.name));
+    if (c.items.some(it => PROTEIN.test(it.name))) t.append(el("span", "tagp", "たんぱく質"));
+    const meta = el("div", "ideameta num", c.src === "前に食べた" ? "" : c.items.map(it => it.name).join("・"));
+    b.append(t, meta, el("div", "ideak num", `約${fmt(c.kcal)}kcal`));
+    b.addEventListener("click", () => {
+      openMeal({ id:newId(), eatenAt:Date.now(), cat, items:c.items.map(it => ({ ...it })), total:c.kcal, thumb:"", comment:"" }, true);
+      setStatus($("mStatus"), "案の内容を入れました。食べたものに合わせて直して「記録する」を押してください。");
+    });
+    box.append(b);
+  }
+  if (pool.length > 3){
+    const more = el("button", "linkbtn", "ほかの案"); more.type = "button";
+    more.addEventListener("click", () => { ideaShift++; render(); });
+    box.append(more);
+  }
+}
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -2120,7 +2246,7 @@ const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoa
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  renderUsage(); $("sDopa").checked = !!settings.dopamine;
+  renderUsage(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn;
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
