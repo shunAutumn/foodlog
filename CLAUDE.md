@@ -51,6 +51,14 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   `bodyimgs`（`{id, data}` 長辺1280px）。同じ日・同じ種類は1枚（置き換え）。サムネイルを横スクロールで日付順、タップで全画面（スクロールスナップで左右に移動、`bpAt` で今の番号を持つ）。
   写真はドライブの「たべたもの記録の顔・体」にも送る（`foodlog.photoq` に type:"body" で積み、`body_put`／削除は `body_delete`、スマホの写真は残す）。
   ファイル名は「yyyy-MM-dd 顔|体 記録ID.jpg」で、`body_list`／`body_get` で読み込み時に戻す。既存の写真は `foodlog.oldBodySent` で一度だけ送る。引っ越しの対象外。
+- **目的**：`settings.profile.goalType`（`GOALS`：cut減量／keep維持／bulk増量／recompボディメイク）。減量・増量は目標体重とペースで増減（向きが逆なら0）、
+  維持はTDEE、ボディメイクはTDEE×0.9。たんぱく質の目標＝体重×（減量2.0・維持1.4・増量1.8・ボディメイク2.0）g を今日の栄養素の行に出す。
+  体重の記録に任意の体脂肪率 `bf`（体重シートのC列）。除脂肪体重＝体重×(1−体脂肪率)。体重カードに約4週間前との比較（`renderComp()`）、グラフは体重／体脂肪率／除脂肪体重を切り替え（`foodlog.wMetric`）。
+- **運動の分を目安に足す**：`settings.profile.addMode`（none／gym 筋トレの記録／apple Appleの動いた分。旧 `addBurn` は gym 扱い）。足すときは活動係数1.2。
+- **動いた分（Appleフィットネス）**：localStorage `foodlog.activity`（`{日付:{kcal, src}}`）。スプレッドシートの「活動」シート（A日付 B kcal C元）に
+  iPhoneのショートカットが `activity_put` で書き込み、アプリは `activity_list` で取り込む（起動時・5分ごと）。手入力も `activity_put`。手順は設定の「Appleフィットネス連携」。
+- **顔・体のAIレビュー**：全画面の各写真に「Sonnet／Haikuでレビュー」。前の同じ種類の写真と今回を送り（`askClaude` の第4引数で中身を渡す）、
+  `{summary, good, care, tips, bodyfat, change}` を写真の記録の `review` に保存。医療的な診断・容姿の採点はしない指示。`stop_reason: refusal` は専用の文言。
 - **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から
   ミフリン・セントジョー式で基礎代謝 → ×活動係数で TDEE → 目標に向けて ペース×7200/7 kcal を増減。基礎代謝は下回らない。
 - **画面の構成**：下のタブバー（食事・筋トレ・＋記録・からだ・設定）。`setTab()`（meal/gym/body、localStorage `foodlog.tab`）。

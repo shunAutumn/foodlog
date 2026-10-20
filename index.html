@@ -299,10 +299,32 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .bpbar #bpClose{font-size:1.3rem; padding:0}
 .bptrack{flex:1; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none}
 .bptrack::-webkit-scrollbar{display:none}
-.bpslide{flex:none; width:100%; height:100%; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:0 12px calc(env(safe-area-inset-bottom) + 16px)}
-.bpslide img{max-width:100%; max-height:calc(100% - 70px); object-fit:contain; border-radius:12px}
+.bpslide{flex:none; width:100%; height:100%; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 12px calc(env(safe-area-inset-bottom) + 24px); overflow-y:auto}
+.bpslide img{max-width:100%; max-height:62vh; object-fit:contain; border-radius:12px; flex:none}
+.bpreview{width:100%; max-width:520px; background:rgba(255,255,255,.08); border-radius:16px; padding:12px 14px; color:#fff; font-size:.88rem; line-height:1.6}
+.bpreview .rvhead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px}
+.bpreview .rvhead small{color:rgba(255,255,255,.6)}
+.bpreview .rvsum{font-weight:800; font-size:1rem; margin-bottom:4px}
+.bpreview .rvbf{display:inline-block; font-weight:800; color:#1b1b1b; background:#ffd36b; border-radius:8px; padding:2px 8px; margin:2px 0 6px}
+.bpreview .rvlabel{font-weight:800; margin-top:8px; color:rgba(255,255,255,.85)}
+.bpreview ul{margin:2px 0 0; padding-left:1.2em}
+.bpreview .rvline{color:rgba(255,255,255,.8); margin-top:4px}
+.bpreview .rverr{color:#ff9a8a; margin-top:6px}
+.rvbtns{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.rvbtns button{flex:1 1 140px; border:0; border-radius:12px; padding:10px; font:inherit; font-size:.82rem; font-weight:800; cursor:pointer; background:rgba(255,255,255,.14); color:#fff}
+.rvbtns button:first-child{background:var(--accent); color:var(--accent-ink)}
+.rvbusy{color:rgba(255,255,255,.8)}
+.bpthumb .bpai{position:absolute; right:6px; top:6px; font-size:.6rem; font-weight:900; color:var(--accent-ink); background:var(--accent); border-radius:6px; padding:1px 5px}
 .bpcap{color:#fff; text-align:center; display:flex; flex-direction:column; gap:2px; font-size:.9rem}
 .bpcap span{color:rgba(255,255,255,.75); font-size:.82rem}
+.week.mini{height:64px; margin-top:10px}
+.pace.comp b{font-weight:800}
+.ranges.small{margin-top:10px}
+.ranges.small button{font-size:.72rem; padding:5px 0}
+.steps{margin:8px 0 10px; padding-left:1.3em; font-size:.85rem; line-height:1.7}
+.steps li{margin-bottom:6px}
+.steps ul{padding-left:1.1em; margin:4px 0}
+.steps code{background:var(--surface); border-radius:6px; padding:1px 5px; font-size:.82rem}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
 .photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
@@ -397,14 +419,21 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
  </div>
 
  <div id="tabBody" hidden>
+  <section class="card" aria-labelledby="actTitle">
+    <div class="cardhead"><h2 id="actTitle">動いた分（消費カロリー）</h2><button class="chip" id="aAdd" type="button">＋ 記録</button></div>
+    <div id="actBox"></div>
+  </section>
+
   <section class="card" aria-labelledby="wTitle">
     <div class="cardhead"><h2 id="wTitle">体重</h2><button class="chip" id="wAdd" type="button">＋ 記録</button></div>
     <div class="wnow"><span class="big2 num" id="wNow">—</span><span class="unit">kg</span><span class="wdelta num" id="wDelta"></span></div>
     <div class="sub" id="wGoalLine"></div>
+    <div class="pace comp" id="wComp" hidden></div>
     <div class="pace" id="wPace" hidden></div>
     <div class="ranges" id="wRanges" role="group" aria-label="グラフの期間">
       <button type="button" data-m="d">日</button><button type="button" data-m="w">週</button><button type="button" data-m="m">月</button><button type="button" data-m="y">年</button>
     </div>
+    <div class="ranges small" id="wMetrics" role="group" aria-label="グラフの指標" hidden><button type="button" data-v="kg">体重</button><button type="button" data-v="bf">体脂肪率</button><button type="button" data-v="lbm">除脂肪体重</button></div>
     <svg id="wChart" viewBox="0 0 320 160" role="img" aria-label="体重の推移"></svg>
     <div class="legend" id="wLegend" hidden><span><i></i>順調なときの目安</span><span><i class="g"></i>目標</span></div>
     <div class="plan" id="wPlan"></div>
@@ -549,6 +578,22 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   </div>
 </div>
 
+<!-- activity sheet -->
+<div class="sheet" id="actSheet" role="dialog" aria-modal="true" aria-labelledby="aTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="aTitle">動いた分を記録</h3>
+    <div class="group">
+      <div class="row"><label for="aDate">日付</label><input type="date" id="aDate" style="text-align:right"></div>
+      <div class="row"><label for="aKcal">動いた分</label><input type="number" id="aKcal" inputmode="numeric" min="0" placeholder="0" style="text-align:right; font-weight:700; font-size:1.2rem"><span class="u">kcal</span></div>
+    </div>
+    <p class="help">Appleフィットネスの「ムーブ（アクティブエネルギー）」の数字を入れます。設定の「Appleフィットネス連携」でショートカットを作ると自動で入ります。</p>
+    <div class="status" id="aStatus"></div>
+    <button class="btn primary" id="aSave" type="button">記録する</button>
+    <button class="btn plain" id="aCancel" type="button">キャンセル</button>
+  </div>
+</div>
+
 <!-- weight sheet -->
 <div class="sheet" id="wSheet" role="dialog" aria-modal="true" aria-labelledby="wsTitle">
   <div class="sheet-in">
@@ -557,6 +602,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="group">
       <div class="row"><label for="wDate">日付</label><input type="date" id="wDate" style="text-align:right"></div>
       <div class="row"><label for="wKg">体重</label><input type="number" id="wKg" inputmode="decimal" step="0.1" min="20" max="300" placeholder="0.0" style="text-align:right; font-weight:700; font-size:1.2rem"><span class="u">kg</span></div>
+      <div class="row"><label for="wBf">体脂肪率（任意）</label><input type="number" id="wBf" inputmode="decimal" step="0.1" min="2" max="70" placeholder="—" style="text-align:right; font-weight:700"><span class="u">%</span></div>
     </div>
     <div class="status" id="wStatus"></div>
     <button class="btn primary" id="wSave" type="button">記録する</button>
@@ -587,6 +633,8 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
       <summary><span><b>目安カロリー</b><small>からだの情報・目標・ペース</small></span></summary>
       <div class="setbody">
     <div class="group">
+      <div class="row"><label for="pGoalType">目的</label>
+        <select id="pGoalType"><option value="cut">減量</option><option value="keep">維持</option><option value="bulk">増量（筋肉をつける）</option><option value="recomp">ボディメイク</option></select></div>
       <div class="row"><label for="pSex">性別</label>
         <select id="pSex"><option value="">選ぶ</option><option value="f">女性</option><option value="m">男性</option></select></div>
       <div class="row"><label for="pBirth">生まれた年</label><input id="pBirth" type="number" inputmode="numeric" placeholder="1995" style="text-align:right"><span class="u">年</span></div>
@@ -600,6 +648,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
           <option value="1.9">とても激しい・肉体労働</option>
         </select></div>
       <div class="row"><label for="pGoal">目標体重</label><input id="pGoal" type="number" inputmode="decimal" step="0.1" placeholder="55.0" style="text-align:right"><span class="u">kg</span></div>
+      <div class="row"><label for="pGoalBf">目標の体脂肪率</label><input id="pGoalBf" type="number" inputmode="decimal" step="0.1" placeholder="15.0" style="text-align:right"><span class="u">%</span></div>
       <div class="row"><label for="pPace">ペース</label>
         <select id="pPace">
           <option value="0.25">ゆっくり（週0.25kg）</option>
@@ -607,11 +656,13 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
           <option value="0.75">はやめ（週0.75kg）</option>
         </select></div>
     </div>
+    <p class="help" id="pGoalNote" style="margin-top:8px"></p>
     <div class="group" style="margin-top:12px">
-      <div class="row"><label for="pBurn">筋トレした分を目安に足す</label><input type="checkbox" id="pBurn" class="switch" role="switch"></div>
+      <div class="row"><label for="pAdd">運動の分を目安に足す</label>
+        <select id="pAdd"><option value="none">足さない</option><option value="gym">筋トレの記録から</option><option value="apple">Appleの動いた分</option></select></div>
     </div>
     <p class="help">いまの体重は、記録したいちばん新しい体重を使います。計算はミフリン・セントジョー式による目安です。
-      <span id="pActNote">「筋トレした分を目安に足す」がONのあいだは、運動を二重に数えないよう、ふだんの活動は自動で「ほとんど座っている」として計算します。</span></p>
+      <span id="pActNote">「運動の分を目安に足す」を使うあいだは、運動を二重に数えないよう、ふだんの活動は自動で「ほとんど座っている」として計算します。Appleの動いた分は筋トレ中に消費した分も含むので、「Appleの動いた分」のときは筋トレの分は足しません。</span></p>
 
 
       </div>
@@ -655,6 +706,24 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="status" id="sStatus"></div>
 
 
+      </div>
+    </details>
+    <details class="setcat" name="setcat">
+      <summary><span><b>Appleフィットネス連携</b><small>動いた分（アクティブエネルギー）を自動で入れる</small></span></summary>
+      <div class="setbody">
+    <p class="help" style="margin-top:0">Webアプリはヘルスケアを直接読めないので、iPhoneの「ショートカット」アプリが毎日、動いた分をスプレッドシートに送り、このアプリが読み込みます（先に「Googleスプレッドシート」の設定が必要です）。</p>
+    <ol class="steps">
+      <li>「ショートカット」アプリ →「オートメーション」→ 右上の「＋」→「時刻」→ 例：毎日 22:00 にして、「すぐに実行」を選ぶ</li>
+      <li>アクション「<b>ヘルスケアサンプルを検索</b>」を追加：種類「アクティブエネルギー」、条件「開始日」が「今日」</li>
+      <li>アクション「<b>統計を計算</b>」を追加：「合計」（入力は1つ前のヘルスケアサンプル）</li>
+      <li>アクション「<b>日付をフォーマット</b>」を追加：「現在の日付」、フォーマット「カスタム」で <code>yyyy-MM-dd</code></li>
+      <li>アクション「<b>URLの内容を取得</b>」を追加：URLに連携URL（下のボタンでコピー）、方法「POST」、本文を要求「JSON」で次の4つを足す
+        <ul><li><code>action</code>：テキスト <code>activity_put</code></li><li><code>token</code>：テキスト（合言葉）</li><li><code>date</code>：フォーマットされた日付</li><li><code>kcal</code>：統計（合計）</li><li><code>src</code>：テキスト <code>apple</code></li></ul></li>
+      <li>一度「▶」で試して、からだタブの「動いた分」に今日の数字が出れば完了です</li>
+    </ol>
+    <button class="btn plain" id="aCopyUrl" type="button">連携URLをコピー</button>
+    <div class="status" id="aHelpStatus"></div>
+    <p class="help">手で入れる場合は、からだタブの「動いた分」→「＋ 記録」から入れられます。</p>
       </div>
     </details>
     <details class="setcat" name="setcat">
@@ -751,6 +820,7 @@ const DB = (() => {
     allBP: () => tx("bodyphotos", "readonly", s => s.getAll()),
     putBP: async (p, data) => { await tx("bodyimgs", "readwrite", s => s.put({ id:p.id, data })); return tx("bodyphotos", "readwrite", s => s.put(p)); },
     bpImg: id => tx("bodyimgs", "readonly", s => s.get(id)),
+    updBP: p => tx("bodyphotos", "readwrite", s => s.put(p)),
     delBP: async id => { await tx("bodyimgs", "readwrite", s => s.delete(id)); return tx("bodyphotos", "readwrite", s => s.delete(id)); }
   };
 })();
@@ -773,17 +843,20 @@ function plan(){
   const h = Number(p.height), age = new Date().getFullYear() - Number(p.birth);
   if (!w || !(h > 0) || !p.sex || !(Number(p.birth) > 1900) || !(age > 0)) return null;
   const bmr = 10 * w + 6.25 * h - 5 * age + (p.sex === "m" ? 5 : -161);
-  // 筋トレ分を足す設定のときは、運動を二重に数えないよう活動は「ほとんど座っている」で計算する
-  const tdee = bmr * (p.addBurn ? 1.2 : Number(p.act || 1.375));
-  const goal = Number(p.goal), pace = Number(p.pace || 0.5);
-  const diff = goal > 0 ? goal - w : 0;
+  // 運動の分を足す設定のときは、二重に数えないよう活動は「ほとんど座っている」で計算する
+  const tdee = bmr * (addMode() !== "none" ? 1.2 : Number(p.act || 1.375));
+  const gt = goalType(), goal = Number(p.goal), pace = Number(p.pace || 0.5);
+  let diff = goal > 0 ? goal - w : 0;
   let target = tdee, dir = 0;
+  // 減量は減らす方向だけ、増量は増やす方向だけ。維持・ボディメイクは目標体重を使わない
+  if (gt === "keep" || gt === "recomp" || (gt === "cut" && diff > 0) || (gt === "bulk" && diff < 0)) diff = 0;
   if (Math.abs(diff) >= 0.3){ dir = Math.sign(diff); target = tdee + dir * pace * KCAL_PER_KG / 7; }
+  if (gt === "recomp") target = tdee * 0.9; // ボディメイク：少しだけ控えめ（約1割減）＋たんぱく質多め
   // 減らすときも基礎代謝は下回らないようにする
   const floored = target < bmr;
   if (floored) target = bmr;
   const realPace = Math.abs(tdee - target) * 7 / KCAL_PER_KG; // 下限で抑えたときは実際のペースで日数を出す
-  return { w, bmr:Math.round(bmr), tdee:Math.round(tdee), target:Math.round(target / 10) * 10, dir, diff, pace:realPace,
+  return { w, gt, protein:proteinTarget(w), bmr:Math.round(bmr), tdee:Math.round(tdee), target:Math.round(target / 10) * 10, dir, diff, pace:realPace,
     weeks:dir && realPace > 0 ? Math.abs(diff) / realPace : 0, floored };
 }
 
@@ -823,13 +896,21 @@ function render(){
   }
   $("todaySub").textContent = sub;
   const tb = workouts.filter(g => dayKey(g.at) === selDay).reduce((s, g) => s + (g.kcal ?? burn(g).kcal), 0);
-  $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${!pl ? "" : settings.profile.addBurn ? "（目安に足しています）" : "（目安カロリーには含めていません）"}` : "";
-  $("todayBurn").hidden = !tb;
+  const ab = activeOn(selDay);
+  const burnTxt = tb ? `筋トレで 約${fmt(tb)} kcal${pl && addMode() === "gym" ? "（目安に足しています）" : ""}` : "";
+  const actTxt = ab ? `動いた分 ${fmt(ab)} kcal${pl && addMode() === "apple" ? "（目安に足しています）" : ""}` : "";
+  $("todayBurn").textContent = [actTxt, burnTxt].filter(Boolean).join("・");
+  $("todayBurn").hidden = !(tb || ab);
   renderWeight(plan());
   renderClose();
   renderBodyPhotos();
+  renderAct();
   renderIdeas(dayMeals, pl && isToday ? tgt - tTotal : null); // 食事の案は今日だけ
-  const tn = nutLine(dayMeals.flatMap(m => m.items || []));
+  let tn = nutLine(dayMeals.flatMap(m => m.items || []));
+  if (pl){
+    const pr = nsum(dayMeals.flatMap(m => m.items || []), "p") || 0, rest = tn.replace(/^たんぱく質 [\d.,]+g・?/, "");
+    tn = `たんぱく質 ${fmt(pr)} / ${pl.protein}g` + (rest ? "・" + rest : "");
+  }
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
 
   // 週の棒：タップでその日を見る（選んだ日が7日より前なら、その日までの7日）
@@ -923,7 +1004,10 @@ function renderWeight(pl){
     const gap = last.kg - goal;
     gl = Math.abs(gap) < 0.05 ? `目標 ${goal.toFixed(1)}kg 達成！` : `目標 ${goal.toFixed(1)}kg まで あと ${Math.abs(gap).toFixed(1)}kg${gap < 0 ? "（増やす）" : ""}`;
   }
+  if (goalType() === "recomp") gl = settings.profile.goalBf ? `目標の体脂肪率 ${settings.profile.goalBf}%` : "ボディメイク中（体脂肪率と除脂肪体重で見ます）";
+  else if (goalType() === "keep") gl = "維持（今の体重を保つ）";
   $("wGoalLine").textContent = gl;
+  renderComp();
 
   // 順調かどうか
   const start = ensureStart(pl), pb = $("wPace"); pb.textContent = ""; pb.hidden = !start;
@@ -951,13 +1035,15 @@ function renderWeight(pl){
     return;
   }
   const head = el("div"); head.append("1日の目安 ", el("b", "num", fmt(pl.target)), " kcal");
-  if (settings.profile.addBurn) head.append(el("span", "muted", "＋筋トレした日はその分"));
+  if (addMode() === "gym") head.append(el("span", "muted", "＋筋トレした日はその分"));
+  if (addMode() === "apple") head.append(el("span", "muted", "＋その日動いた分"));
   const pace = pl.floored ? `約${(Math.round(pl.pace * 20) / 20).toFixed(2).replace(/0$/, "")}` : settings.profile.pace;
-  const why = pl.dir < 0 ? `週${pace}kgずつ減らすペース` : pl.dir > 0 ? `週${pace}kgずつ増やすペース` : "今の体重を保つ量";
+  const why = pl.gt === "recomp" ? "ボディメイク：消費より1割ほど控えめ" : pl.gt === "keep" ? "今の体重を保つ量" : pl.dir < 0 ? `週${pace}kgずつ減らすペース` : pl.dir > 0 ? `週${pace}kgずつ増やすペース` : "今の体重を保つ量";
   const d1 = el("div", "muted", `${why}${pl.dir ? `・目標まで約${Math.max(1, Math.round(pl.weeks))}週間` : ""}`);
   const d2 = el("div", "muted", `基礎代謝 ${fmt(pl.bmr)} kcal・TDEE（1日の消費）${fmt(pl.tdee)} kcal`);
   box.append(head, d1, d2);
-  if (settings.profile.addBurn && Number(settings.profile.act) > 1.2) box.append(el("div", "muted", "（筋トレ分を足す設定のため、活動は「ほとんど座っている」で計算しています）"));
+  if (addMode() !== "none" && Number(settings.profile.act) > 1.2) box.append(el("div", "muted", "（運動の分を足す設定のため、活動は「ほとんど座っている」で計算しています）"));
+  box.append(el("div", "muted", `目的：${GOALS[pl.gt][0]}・たんぱく質の目標 1日 ${pl.protein}g（体重×${GOALS[pl.gt][2]}g）`));
   if (pl.floored) box.append(el("div", "muted", "体に負担がないよう、基礎代謝を下回らない量にしています。"));
 }
 
@@ -968,7 +1054,43 @@ const MODES = {
   m:{ back:270 * DAY, fwd:90 * DAY, key:t => ymd(t).slice(0, 7) },
   y:{ back:365 * DAY, fwd:0, key:t => ymd(t).slice(0, 4) }
 };
+// 体脂肪率・除脂肪体重（体脂肪率を記録した日だけ）
+const lbm = w => w.bf ? w.kg * (1 - w.bf / 100) : null;
+function renderComp(){
+  const box = $("wComp"), withBf = weights.filter(w => w.bf > 0); box.textContent = "";
+  $("wMetrics").hidden = !withBf.length;
+  if (!withBf.length){
+    box.hidden = goalType() !== "recomp" && goalType() !== "bulk";
+    box.append(el("div", "muted", "体重を記録するときに体脂肪率も入れると、筋肉（除脂肪体重）が増えているかを確かめられます。"));
+    return;
+  }
+  box.hidden = false;
+  const last = withBf[withBf.length - 1];
+  // 4週間前に近い記録と比べる
+  const base = [...withBf].reverse().find(w => dms(last.date) - dms(w.date) >= 21 * 864e5) || withBf[0];
+  const l1 = el("div"); l1.append(`体脂肪率 `, el("b", "num", `${last.bf}%`), `・除脂肪体重 `, el("b", "num", `${lbm(last).toFixed(1)}kg`));
+  box.append(l1);
+  if (base !== last){
+    const dBf = last.bf - base.bf, dL = lbm(last) - lbm(base), wks = Math.max(1, Math.round((dms(last.date) - dms(base.date)) / (7 * 864e5)));
+    const sign = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1);
+    const ok = goalType() === "bulk" ? dL > 0 && dBf < 1.5 : goalType() === "cut" ? dL > -0.5 : dBf <= 0 && dL >= -0.2;
+    const l2 = el("div", "num"); l2.append(`${md(dms(base.date))}から約${wks}週間：体脂肪率 ${sign(dBf)}%・除脂肪体重 ${sign(dL)}kg　`,
+      el("span", ok ? "ok" : "ng", ok ? "順調です" : goalType() === "cut" ? "筋肉が減っているかも" : "様子を見ましょう"));
+    box.append(l2);
+  }
+}
+let wMetric = "kg";
+try { wMetric = localStorage.getItem("foodlog.wMetric") || "kg"; } catch {}
+const metricVal = w => wMetric === "bf" ? (w.bf || null) : wMetric === "lbm" ? lbm(w) : w.kg;
+$("wMetrics").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  wMetric = b.dataset.v; try { localStorage.setItem("foodlog.wMetric", wMetric); } catch {}
+  render();
+});
 function drawChart(goal, start){
+  if (wMetric !== "kg" && !weights.some(w => w.bf > 0)) wMetric = "kg";
+  for (const b of $("wMetrics").children) b.setAttribute("aria-pressed", String(b.dataset.v === wMetric));
+  if (wMetric !== "kg"){ goal = wMetric === "bf" ? Number(settings.profile.goalBf) || 0 : 0; start = null; }
   const svg = $("wChart"), W = 320, H = 160, L = 30, R = 8, T = 10, B = 22;
   svg.textContent = "";
   const NS = "http://www.w3.org/2000/svg";
@@ -981,7 +1103,7 @@ function drawChart(goal, start){
   }
   // 期間ごとの平均（点は、その期間に記録した日の平均の位置に置く）
   const groups = new Map();
-  for (const w of weights){ const t = dms(w.date), k = mode.key(t); (groups.get(k) || groups.set(k, []).get(k)).push([t, w.kg]); }
+  for (const w of weights){ const v = metricVal(w); if (v == null) continue; const t = dms(w.date), k = mode.key(t); (groups.get(k) || groups.set(k, []).get(k)).push([t, v]); }
   const avg = (a, i) => a.reduce((s, v) => s + v[i], 0) / a.length;
   const pts = [...groups.values()].map(a => [avg(a, 0), avg(a, 1)]).filter(p => p[0] >= x0 - DAY && p[0] <= x1 + DAY).sort((a, b) => a[0] - b[0]);
   // 目安の線（出発点より前は引かない）
@@ -1073,7 +1195,7 @@ function addUsage(model, u){
 const usdTxt = d => d > 0 && d < 0.01 ? d.toFixed(4) : d.toFixed(3);
 const yen = d => d * YEN_PER_USD < 10 ? (d * YEN_PER_USD).toFixed(1) : fmt(Math.round(d * YEN_PER_USD));
 
-async function askClaude(jpegDataUrl, signal, model){
+async function askClaude(jpegDataUrl, signal, model, content){
   model = model || settings.model;
   const t0 = performance.now();
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -1086,7 +1208,7 @@ async function askClaude(jpegDataUrl, signal, model){
     },
     body:JSON.stringify({
       model, max_tokens:4096, // 考える過程も含めた上限（使った分だけ課金）
-      messages:[{ role:"user", content:[
+      messages:[{ role:"user", content:content || [
         { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:jpegDataUrl.split(",")[1] } },
         { type:"text", text:PROMPT }
       ]}]
@@ -1098,6 +1220,7 @@ async function askClaude(jpegDataUrl, signal, model){
     const err = new Error(msg); err.status = res.status; throw err;
   }
   addUsage(model, data.usage);
+  if (data.stop_reason === "refusal"){ const err = new Error("refusal"); err.refusal = true; throw err; }
   const text = (data.content || []).filter(c => c.type === "text").map(c => c.text).join("");
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
   const u = data.usage || {};
@@ -1687,7 +1810,6 @@ $("manual").addEventListener("click", () => {
   let at = Date.now();
   if (selDay !== dayKey(at)){ const d = new Date(dms(selDay)), n = new Date(); d.setHours(n.getHours(), n.getMinutes(), 0, 0); at = d.getTime(); }
   openMeal({ id:newId(), eatenAt:at, items:[blank()], total:0, thumb:"", comment:"" }, true);
-  $("mItems").querySelector("input")?.focus();
 });
 $("file").addEventListener("change", async () => {
   const f = $("file").files && $("file").files[0]; if (!f) return;
@@ -1947,7 +2069,6 @@ function renderGItems(){
 }
 $("gAdd").addEventListener("click", () => {
   openGym({ id:newId(), at:Date.now(), items:[{ name:"", sets:[blankSet()] }], memo:"" }, true);
-  $("gItems").querySelector("input")?.focus();
 });
 $("gAddEx").addEventListener("click", () => {
   gdraft.items.push({ name:"", sets:[blankSet()] }); renderGItems();
@@ -2221,10 +2342,20 @@ const burnOn = k => workouts.filter(g => dayKey(g.at) === k).reduce((s, g) => s 
 // その日の目安（設定がONなら、その日の筋トレの消費を足す）
 function targetFor(k, pl = plan()){
   if (!pl) return null;
-  return pl.target + (settings.profile.addBurn ? burnOn(k) : 0);
+  const m = addMode();
+  return pl.target + (m === "gym" ? burnOn(k) : m === "apple" ? activeOn(k) : 0);
 }
-function syncAct(){ $("pAct").disabled = !!settings.profile.addBurn; $("pAct").closest(".row").style.opacity = settings.profile.addBurn ? ".45" : ""; }
-$("pBurn").addEventListener("change", () => { settings.profile.addBurn = $("pBurn").checked; saveSettings(); syncAct(); render(); });
+function syncAct(){
+  const on = addMode() !== "none", gt = goalType();
+  $("pAct").disabled = on; $("pAct").closest(".row").style.opacity = on ? ".45" : "";
+  // 目的に合わせて、使う項目だけ出す
+  for (const id of ["pGoal", "pPace"]) $(id).closest(".row").hidden = gt === "keep" || gt === "recomp";
+  $("pGoalBf").closest(".row").hidden = gt !== "recomp";
+  $("pGoalNote").textContent = GOALS[gt][1] + (gt === "recomp" ? "。体重より、体脂肪率と除脂肪体重（筋肉など脂肪以外の重さ）の変化で順調かを見ます。" : "");
+}
+$("pAdd").addEventListener("change", () => { settings.profile.addMode = $("pAdd").value; delete settings.profile.addBurn; saveSettings(); syncAct(); render(); });
+$("pGoalType").addEventListener("change", () => { settings.profile.goalType = $("pGoalType").value; saveSettings(); syncAct(); render(); });
+$("pGoalBf").addEventListener("change", () => { settings.profile.goalBf = $("pGoalBf").value; saveSettings(); render(); });
 
 /* ---------- 残りのカロリーで食べられそうな食事の案（AIなし） ---------- */
 // 定番の組み合わせ。品目は目安表 FOODS の「名前|量のめやす」で引く
@@ -2345,6 +2476,7 @@ function renderBodyPhotos(){
     const w = weightNear(p.date);
     b.append(im, el("span", "bpdate num", `${Number(p.date.slice(5, 7))}/${Number(p.date.slice(8))}`));
     if (w) b.append(el("span", "bpw num", `${w.kg.toFixed(1)}kg`));
+    if (p.review) b.append(el("span", "bpai", "AI"));
     b.addEventListener("click", () => openBpView(bpKind, i));
     strip.append(b);
   });
@@ -2384,7 +2516,7 @@ $("bpSave").addEventListener("click", async () => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setStatus($("bpStatus"), "日付を選んでください。", "err");
   const same = bodyPhotos.find(p => p.kind === bpDraft.kind && p.date === date);
   if (same && !confirm(`${date} の${BP_KINDS[bpDraft.kind]}の写真を、この写真に置き換えますか？`)) return;
-  const p = { id:same ? same.id : newId(), kind:bpDraft.kind, date, thumb:bpDraft.thumb, savedAt:Date.now() };
+  const p = { id:same ? same.id : newId(), kind:bpDraft.kind, date, thumb:bpDraft.thumb, savedAt:Date.now() }; // 写真が変わるのでレビューは付け直す
   try {
     await DB.putBP(p, bpDraft.big);
     bodyPhotos = bodyPhotos.filter(x => x.id !== p.id).concat(p);
@@ -2407,7 +2539,8 @@ async function openBpView(kind, index){
     const cap = el("div", "bpcap num");
     cap.append(el("b", null, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WEEK[d.getDay()]}）`));
     if (w) cap.append(el("span", null, `${w.kg.toFixed(1)}kg${prev ? `（前の写真から ${w.kg - prev.kg >= 0 ? "+" : "−"}${Math.abs(w.kg - prev.kg).toFixed(1)}kg）` : ""}`));
-    slide.append(im, cap); track.append(slide);
+    const rv = el("div", "bpreview"); renderReview(rv, p);
+    slide.append(im, cap, rv); track.append(slide);
     DB.bpImg(p.id).then(r => { if (r && r.data) im.src = r.data; }).catch(() => {});
   });
   v.hidden = false; document.body.style.overflow = "hidden";
@@ -2418,7 +2551,7 @@ let bpAt = 0;
 const bpIndex = () => Math.min(bpViewList.length - 1, Math.max(0, bpAt));
 function bpCounter(){ $("bpCount").textContent = bpViewList.length ? `${bpIndex() + 1} / ${bpViewList.length}` : ""; }
 $("bpTrack").addEventListener("scroll", () => { const t = $("bpTrack"); if (t.clientWidth) bpAt = Math.round(t.scrollLeft / t.clientWidth); bpCounter(); }, { passive:true });
-function closeBpView(){ $("bpView").hidden = true; $("bpTrack").textContent = ""; document.body.style.overflow = ""; }
+function closeBpView(){ $("bpView").hidden = true; $("bpTrack").textContent = ""; document.body.style.overflow = ""; renderBodyPhotos(); }
 $("bpClose").addEventListener("click", closeBpView);
 document.addEventListener("keydown", e => {
   if ($("bpView").hidden) return;
@@ -2440,7 +2573,8 @@ const REC_OPTS = {
   meal:[["📷", "写真を撮って記録", "Claudeで料理とカロリーを読み取れます", () => $("shutter").click()],
         ["✏️", "手で入力", "写真なし・AIなしで入力します", () => $("manual").click()]],
   gym:[["🏋️", "トレーニングを記録", "種目・重さ・回数を入れます", () => $("gAdd").click()]],
-  body:[["⚖️", "体重を記録", "", () => $("wAdd").click()],
+  body:[["⚖️", "体重を記録", "体脂肪率もいっしょに入れられます", () => $("wAdd").click()],
+        ["🔥", "動いた分を記録", "Appleフィットネスのムーブの数字", () => openAct()],
         ["📷", "顔・体の写真を撮る", "", () => $("bpAdd").click()]]
 };
 $("recBtn").addEventListener("click", () => {
@@ -2462,7 +2596,8 @@ $("recCancel").addEventListener("click", hide);
 /* ---------- 見た目：ダーク／ライトとアクセントの色 ---------- */
 const ACCENTS = {
   mint:["ミント", "#1FA874", "#3DD39A"], blue:["ブルー", "#2F7DF6", "#5AA2FF"], orange:["オレンジ", "#E06A1B", "#FF9A4D"],
-  pink:["ピンク", "#D9417A", "#FF79AA"], purple:["パープル", "#7A4FD8", "#A98BFF"], red:["レッド", "#D93A3A", "#FF6B6B"]
+  pink:["ピンク", "#D9417A", "#FF79AA"], purple:["パープル", "#7A4FD8", "#A98BFF"], red:["レッド", "#D93A3A", "#FF6B6B"],
+  beige:["ベージュ", "#A8845A", "#D8BC8E"]
 };
 const darkMQ = matchMedia("(prefers-color-scheme: dark)");
 function applyTheme(){
@@ -2495,6 +2630,153 @@ function renderLook(){
 }
 applyTheme();
 
+/* ---------- 顔・体のAIレビュー（前の写真があれば一緒に送って変化も見てもらう） ---------- */
+const REVIEW_PROMPT = {
+  face:`添付は、本人がセルフケアの記録として撮った自分の顔の写真です。見た目から分かる範囲で、前向きにレビューしてください。
+- 肌の調子（乾燥・テカリ・赤み・くすみ・ニキビなど）、むくみ、目の下のクマ、顔色や表情の印象を見る。
+- 前回の写真があれば、今回との変化を比べる。
+- 病名を言うなどの医療的な診断はしない。気になる様子が強ければ「気になる場合は皮膚科など専門家に相談を」と添える。
+- 容姿の良し悪しや魅力の採点はしない。人物の特定もしない。`,
+  body:`添付は、本人が体づくりの記録として撮った自分の体の写真です。トレーニングと食事の参考になるよう、見た目から分かる範囲で前向きにレビューしてください。
+- 姿勢、筋肉が発達して見える部位と、これから伸ばすとよい部位、全体の引き締まり具合を見る。
+- 体脂肪率の目安を、見た目からの大まかな範囲（例：「15〜18%」）で書く。写真からの推定で誤差が大きいことを前提にする。
+- 前回の写真があれば、今回との変化を比べる。
+- 体型を否定する言い方はしない。医療的な診断はしない。`
+};
+const REVIEW_FORMAT = `
+次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
+{"summary":"30字以内の総評","good":["良いところ（最大3つ）"],"care":["気をつけたいところ（最大3つ）"],"tips":["今日からできること（最大3つ）"],"bodyfat":"体脂肪率の目安（体の写真のときだけ。顔なら空文字）","change":"前回からの変化（前回の写真がなければ空文字）"}`;
+function aboutMe(){
+  const p = settings.profile, w = weights[weights.length - 1];
+  const parts = [p.sex === "m" ? "男性" : p.sex === "f" ? "女性" : "", Number(p.birth) > 1900 ? `${new Date().getFullYear() - Number(p.birth)}歳` : "",
+    p.height ? `身長${p.height}cm` : "", w ? `体重${w.kg}kg${w.bf ? `・体脂肪率${w.bf}%` : ""}` : "", `目的：${GOALS[p.goalType || "cut"][0]}`].filter(Boolean);
+  return parts.length ? `本人の情報：${parts.join("・")}` : "";
+}
+async function reviewPhoto(p, model){
+  const list = bpOf(p.kind), i = list.findIndex(x => x.id === p.id), prev = i > 0 ? list[i - 1] : null;
+  const cur = await DB.bpImg(p.id), before = prev ? await DB.bpImg(prev.id) : null;
+  const img = d => ({ type:"image", source:{ type:"base64", media_type:"image/jpeg", data:d.split(",")[1] } });
+  const content = [];
+  if (before && before.data) content.push({ type:"text", text:`前回（${prev.date}）の写真:` }, img(before.data));
+  content.push({ type:"text", text:`今回（${p.date}）の写真:` }, img(cur.data));
+  content.push({ type:"text", text:[REVIEW_PROMPT[p.kind], aboutMe(), REVIEW_FORMAT].filter(Boolean).join("\n") });
+  const res = await askClaude(null, null, model, content);
+  const r = res.r || {};
+  const arr = v => Array.isArray(v) ? v.map(x => String(x).slice(0, 120)).slice(0, 3) : [];
+  p.review = { at:Date.now(), model, summary:String(r.summary || "").slice(0, 80), good:arr(r.good), care:arr(r.care), tips:arr(r.tips),
+    bodyfat:p.kind === "body" ? String(r.bodyfat || "").slice(0, 30) : "", change:String(r.change || "").slice(0, 160), prev:prev ? prev.date : "" };
+  await DB.updBP(p);
+  bodyPhotos = bodyPhotos.map(x => x.id === p.id ? p : x);
+  return p;
+}
+function renderReview(box, p){
+  box.textContent = "";
+  const rv = p.review;
+  if (rv){
+    const h = el("div", "rvhead"); h.append(el("b", null, "AIレビュー"), el("small", null, `${PRICES[rv.model]?.label || ""}・${md(rv.at)}`));
+    box.append(h);
+    if (rv.summary) box.append(el("div", "rvsum", rv.summary));
+    if (rv.bodyfat) box.append(el("div", "rvbf", `体脂肪率の目安：${rv.bodyfat}`));
+    if (rv.change) box.append(el("div", "rvline", `前回（${rv.prev}）から：${rv.change}`));
+    for (const [label, key] of [["良いところ", "good"], ["気をつけたいところ", "care"], ["今日からできること", "tips"]]){
+      if (!rv[key].length) continue;
+      box.append(el("div", "rvlabel", label));
+      const ul = el("ul"); for (const t of rv[key]) ul.append(el("li", null, t)); box.append(ul);
+    }
+  }
+  if (!settings.key){ box.append(el("div", "rvline", "APIキーを設定すると、AIにレビューしてもらえます。")); return; }
+  const row = el("div", "rvbtns");
+  for (const m of [settings.model, otherModel(settings.model)]){
+    const b = el("button", null, `${rv ? "もう一度 " : ""}${PRICES[m].label}でレビュー（約${m === "claude-haiku-5-5" ? "0.2" : "3"}円）`); b.type = "button";
+    b.addEventListener("click", async e => {
+      e.stopPropagation();
+      row.textContent = ""; row.append(el("span", "rvbusy", `${PRICES[m].label}がレビューしています…`));
+      try { renderReview(box, await reviewPhoto(p, m)); }
+      catch (err){
+        renderReview(box, p);
+        box.append(el("div", "rverr", err.refusal ? "この写真ではレビューできませんでした。別の写真で試してください。"
+          : err instanceof SyntaxError ? "うまくレビューできませんでした。もう一度試してください。" : (apiErrorText(err) || "").replace("手で入力できます。", "もう一度試してください。")));
+      }
+    });
+    row.append(b);
+  }
+  box.append(row);
+}
+
+/* ---------- 体づくりの目的 ---------- */
+// [名前, 説明, たんぱく質の目標 g/kg]
+const GOALS = {
+  cut:["減量", "体重を落とす（目標体重に向けて少なめに食べる）", 2.0],
+  keep:["維持", "今の体重を保つ", 1.4],
+  bulk:["増量", "筋肉をつけて体重を増やす（少し多めに食べる）", 1.8],
+  recomp:["ボディメイク", "体重はほぼそのままで、脂肪を減らして筋肉を増やす", 2.0]
+};
+const goalType = () => GOALS[settings.profile.goalType] ? settings.profile.goalType : "cut";
+const proteinTarget = w => Math.round(w * GOALS[goalType()][2]);
+// 目安に足す運動：none（足さない）／gym（筋トレの記録）／apple（Appleの動いた分）
+const addMode = () => settings.profile.addMode || (settings.profile.addBurn ? "gym" : "none");
+
+/* ---------- 動いた分（Appleフィットネスのアクティブエネルギー） ---------- */
+const AKEY = "foodlog.activity";
+const readAct = () => { try { return JSON.parse(localStorage.getItem(AKEY) || "{}"); } catch { return {}; } };
+const writeAct = a => { try { localStorage.setItem(AKEY, JSON.stringify(a)); } catch {} };
+const activeOn = k => (readAct()[k] || {}).kcal || 0;
+// スプレッドシートの「活動」シート（ショートカットが書き込む）から取ってくる
+let actPulled = 0;
+async function pullActivity(force){
+  if (!settings.url || (!force && Date.now() - actPulled < 5 * 60e3)) return;
+  actPulled = Date.now();
+  try {
+    const r = await callSheet({ action:"activity_list" });
+    const a = readAct();
+    for (const [date, kcal, src] of r.rows || []){
+      const k = Number(String(kcal).replace(/[^\d.]/g, ""));
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date) && k >= 0) a[date] = { kcal:Math.round(k), src:String(src || "") };
+    }
+    writeAct(a); render();
+  } catch {}
+}
+function openAct(){
+  $("aDate").value = selDay || ymd(Date.now());
+  const fill = () => { const v = readAct()[$("aDate").value]; $("aKcal").value = v ? v.kcal : ""; };
+  fill(); $("aDate").onchange = fill;
+  setStatus($("aStatus"), ""); show($("actSheet"));
+}
+$("aAdd").addEventListener("click", openAct);
+$("aCancel").addEventListener("click", hide);
+$("aSave").addEventListener("click", () => {
+  const date = $("aDate").value, kcal = Math.round(Number($("aKcal").value));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setStatus($("aStatus"), "日付を選んでください。", "err");
+  if (!(kcal >= 0 && kcal < 10000)) return setStatus($("aStatus"), "kcal を数字で入れてください（例：520）。", "err");
+  const a = readAct(); a[date] = { kcal, src:"手入力" }; writeAct(a);
+  hide(); render();
+  enqueue({ action:"activity_put", id:"a:" + date, date, kcal, src:"手入力" });
+});
+function renderAct(){
+  const tk = ymd(Date.now()), a = readAct(), box = $("actBox"); box.textContent = "";
+  const v = a[tk];
+  const big = el("div", "wnow"); big.append(el("span", "big2 num", v ? fmt(v.kcal) : "—"), el("span", "unit", "kcal"),
+    el("span", "wdelta", v ? `今日・${v.src === "apple" ? "Appleフィットネス" : v.src || ""}` : "今日はまだありません"));
+  box.append(big);
+  // 直近7日
+  const wk = el("div", "week mini");
+  const days = []; for (let i = 6; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); days.push(ymd(d.getTime())); }
+  const max = Math.max(1, ...days.map(k => (a[k] || {}).kcal || 0));
+  for (const k of days){
+    const c = el("div", "col" + (k === tk ? " today" : "")), b = el("div", "bar");
+    b.style.height = `${Math.max(4, Math.round(((a[k] || {}).kcal || 0) / max * 40))}px`;
+    if ((a[k] || {}).kcal) b.style.background = "var(--accent)";
+    c.title = `${Number(k.slice(5, 7))}/${Number(k.slice(8))} ${fmt((a[k] || {}).kcal || 0)}kcal`;
+    c.append(b, el("div", "d", k === tk ? "今日" : WEEK[new Date(dms(k)).getDay()])); wk.append(c);
+  }
+  box.append(wk);
+  box.append(el("div", "sub", addMode() === "apple" ? "この「動いた分」を、その日の目安カロリーに足しています。" : "設定の「目安カロリー」で、この分を目安に足すこともできます。"));
+}
+$("aCopyUrl").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(settings.url || ""); setStatus($("aHelpStatus"), settings.url ? "連携URLをコピーしました。" : "先に「Googleスプレッドシート」で連携URLを入れてください。", settings.url ? "" : "err"); }
+  catch { setStatus($("aHelpStatus"), "コピーできませんでした。", "err"); }
+});
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -2503,7 +2785,7 @@ function openWeight(date){
 function fillWeight(){
   const w = weights.find(x => x.date === $("wDate").value);
   const last = weights[weights.length - 1];
-  $("wKg").value = w ? w.kg : "";
+  $("wKg").value = w ? w.kg : ""; $("wBf").value = w && w.bf ? w.bf : "";
   $("wKg").placeholder = last ? last.kg.toFixed(1) : "0.0";
   $("wDel").hidden = !w;
   $("wSave").textContent = w ? "保存する" : "記録する";
@@ -2516,12 +2798,14 @@ $("wSave").addEventListener("click", async () => {
   const date = $("wDate").value, kg = Math.round(Number($("wKg").value) * 10) / 10;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setStatus($("wStatus"), "日付を選んでください。", "err");
   if (!(kg >= 20 && kg <= 300)) return setStatus($("wStatus"), "体重を kg で入れてください（例：58.4）。", "err");
-  const w = { date, kg, savedAt:Date.now() };
+  const bfv = $("wBf").value === "" ? null : Math.round(Number($("wBf").value) * 10) / 10;
+  if (bfv != null && !(bfv >= 2 && bfv <= 70)) return setStatus($("wStatus"), "体脂肪率は % で入れてください（例：18.5）。空でもかまいません。", "err");
+  const w = { date, kg, ...(bfv ? { bf:bfv } : {}), savedAt:Date.now() };
   try {
     await DB.putW(w);
     weights = weights.filter(x => x.date !== date).concat(w); sortW();
     hide(); render();
-    enqueue({ action:"weight_upsert", id:"w:" + date, date, kg });
+    enqueue({ action:"weight_upsert", id:"w:" + date, date, kg, bf:bfv });
   } catch { setStatus($("wStatus"), "保存できませんでした。もう一度押してください。", "err"); }
 });
 $("wDel").addEventListener("click", async () => {
@@ -2561,7 +2845,7 @@ const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoa
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  renderUsage(); renderLook(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn; syncAct();
+  renderUsage(); renderLook(); $("sDopa").checked = !!settings.dopamine; $("pAdd").value = addMode(); $("pGoalType").value = goalType(); $("pGoalBf").value = settings.profile.goalBf || ""; syncAct();
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
@@ -2626,10 +2910,10 @@ $("sImport").addEventListener("click", async () => {
     try {
       const wr = await callSheet({ action:"weight_list" });
       const haveW = new Set(weights.map(w => w.date));
-      for (const [date, kg] of wr.rows || []){
+      for (const [date, kg, bf] of wr.rows || []){
         const k = Number(kg);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(k > 0) || haveW.has(date)) continue;
-        const w = { date, kg:k, savedAt:Date.now() };
+        const w = { date, kg:k, ...(Number(bf) > 0 ? { bf:Number(bf) } : {}), savedAt:Date.now() };
         await DB.putW(w); weights.push(w); wAdded++;
       }
       sortW();
@@ -2771,7 +3055,8 @@ async function sendOldBody(){
   for (const p of bodyPhotos) enqueueBody(p);
   try { localStorage.setItem(FLAG, "1"); } catch {}
 }
-load().then(sendOldPhotos).then(sendOldBody).then(flush);
+load().then(sendOldPhotos).then(sendOldBody).then(flush).then(() => pullActivity(true));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) pullActivity(); });
 setInterval(() => { if (!openSheetEl) render(); }, 5 * 60e3);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

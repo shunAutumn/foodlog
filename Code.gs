@@ -72,14 +72,16 @@ function authorize() {
   photoFolder_();
 }
 
-// 体重は「体重」シート（A日付 yyyy-MM-dd、B体重kg）。なければ最後に作る（1枚目のシートの位置は変えない）
+// 体重は「体重」シート（A日付 yyyy-MM-dd、B体重kg、C体脂肪率%）。なければ最後に作る（1枚目のシートの位置は変えない）
 function weightSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let ws = ss.getSheetByName('体重');
   if (!ws) {
     ws = ss.insertSheet('体重', ss.getSheets().length);
-    ws.getRange(1, 1, 1, 2).setValues([['日付', '体重(kg)']]);
+    ws.getRange(1, 1, 1, 3).setValues([['日付', '体重(kg)', '体脂肪率(%)']]);
     ws.getRange('A:A').setNumberFormat('@');
+  } else if (ws.getRange(1, 3).getDisplayValue() === '') {
+    ws.getRange(1, 3).setValue('体脂肪率(%)'); // 以前に作ったシートに列を足す
   }
   return ws;
 }
@@ -114,6 +116,18 @@ function deleteGymRows_(gs, id) {
   if (last < 2) return;
   const ids = gs.getRange(2, 7, last - 1, 1).getDisplayValues();
   for (let i = ids.length - 1; i >= 0; i--) if (ids[i][0] === String(id)) gs.deleteRow(i + 2);
+}
+
+// 動いた分は「活動」シート（A日付 yyyy-MM-dd、B動いた分kcal、C元）。ショートカットから activity_put で書き込む
+function activitySheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let as = ss.getSheetByName('活動');
+  if (!as) {
+    as = ss.insertSheet('活動', ss.getSheets().length);
+    as.getRange(1, 1, 1, 3).setValues([['日付', '動いた分(kcal)', '元']]);
+    as.getRange('A:A').setNumberFormat('@');
+  }
+  return as;
 }
 
 // A列で最後に値が入っている行の次
@@ -157,14 +171,28 @@ function doPost(e) {
       if (req.kg == null) { if (wr) ws.deleteRow(wr); return out_({ ok: true }); }
       const target = wr || ws.getLastRow() + 1;
       ws.getRange(target, 1).setNumberFormat('@');
-      ws.getRange(target, 1, 1, 2).setValues([[String(req.date), Number(req.kg)]]);
+      ws.getRange(target, 1, 1, 3).setValues([[String(req.date), Number(req.kg), req.bf ? Number(req.bf) : '']]);
       return out_({ ok: true });
+    }
+
+    if (req.action === 'activity_put') {
+      const date = String(req.date || '').trim(), kcal = parseFloat(String(req.kcal).replace(/[^\d.]/g, ''));
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(kcal >= 0)) return out_({ ok: false, error: 'bad date or kcal' });
+      const as = activitySheet_(), wr = findWeightRow_(as, date), target = wr || as.getLastRow() + 1;
+      as.getRange(target, 1).setNumberFormat('@');
+      as.getRange(target, 1, 1, 3).setValues([[date, Math.round(kcal), String(req.src || '')]]);
+      return out_({ ok: true });
+    }
+
+    if (req.action === 'activity_list') {
+      const as = activitySheet_(), last = as.getLastRow();
+      return out_({ ok: true, rows: last < 2 ? [] : as.getRange(2, 1, last - 1, 3).getDisplayValues() });
     }
 
     if (req.action === 'weight_list') {
       const ws = weightSheet_();
       const last = ws.getLastRow();
-      return out_({ ok: true, rows: last < 2 ? [] : ws.getRange(2, 1, last - 1, 2).getDisplayValues() });
+      return out_({ ok: true, rows: last < 2 ? [] : ws.getRange(2, 1, last - 1, 3).getDisplayValues() });
     }
 
     if (req.action === 'gym_upsert' || req.action === 'gym_delete') {
