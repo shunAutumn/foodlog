@@ -509,7 +509,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
       <div class="row"><label for="pBurn">筋トレした分を目安に足す</label><input type="checkbox" id="pBurn" class="switch" role="switch"></div>
     </div>
     <p class="help">いまの体重は、記録したいちばん新しい体重を使います。計算はミフリン・セントジョー式による目安です。
-      「筋トレした分を目安に足す」をONにするときは、ふだんの活動を「ほとんど座っている」にしてください（運動を二重に数えないため）。</p>
+      <span id="pActNote">「筋トレした分を目安に足す」がONのあいだは、運動を二重に数えないよう、ふだんの活動は自動で「ほとんど座っている」として計算します。</span></p>
 
     <div class="cap">Googleスプレッドシート</div>
     <div class="group">
@@ -615,7 +615,8 @@ function plan(){
   const h = Number(p.height), age = new Date().getFullYear() - Number(p.birth);
   if (!w || !(h > 0) || !p.sex || !(Number(p.birth) > 1900) || !(age > 0)) return null;
   const bmr = 10 * w + 6.25 * h - 5 * age + (p.sex === "m" ? 5 : -161);
-  const tdee = bmr * Number(p.act || 1.375);
+  // 筋トレ分を足す設定のときは、運動を二重に数えないよう活動は「ほとんど座っている」で計算する
+  const tdee = bmr * (p.addBurn ? 1.2 : Number(p.act || 1.375));
   const goal = Number(p.goal), pace = Number(p.pace || 0.5);
   const diff = goal > 0 ? goal - w : 0;
   let target = tdee, dir = 0;
@@ -794,8 +795,8 @@ function renderWeight(pl){
   const d1 = el("div", "muted", `${why}${pl.dir ? `・目標まで約${Math.max(1, Math.round(pl.weeks))}週間` : ""}`);
   const d2 = el("div", "muted", `基礎代謝 ${fmt(pl.bmr)} kcal・TDEE（1日の消費）${fmt(pl.tdee)} kcal`);
   box.append(head, d1, d2);
+  if (settings.profile.addBurn && Number(settings.profile.act) > 1.2) box.append(el("div", "muted", "（筋トレ分を足す設定のため、活動は「ほとんど座っている」で計算しています）"));
   if (pl.floored) box.append(el("div", "muted", "体に負担がないよう、基礎代謝を下回らない量にしています。"));
-  if (settings.profile.addBurn && Number(settings.profile.act) > 1.2) box.append(el("div", "warn", "筋トレ分を足す設定なので、ふだんの活動は「ほとんど座っている」にすると二重に数えずにすみます。"));
 }
 
 // 日＝1日ごと／週・月・年＝その期間の平均。少し先まで表示して、目安の線の行き先も見えるようにする
@@ -2083,7 +2084,8 @@ function targetFor(k, pl = plan()){
   if (!pl) return null;
   return pl.target + (settings.profile.addBurn ? burnOn(k) : 0);
 }
-$("pBurn").addEventListener("change", () => { settings.profile.addBurn = $("pBurn").checked; saveSettings(); render(); });
+function syncAct(){ $("pAct").disabled = !!settings.profile.addBurn; $("pAct").closest(".row").style.opacity = settings.profile.addBurn ? ".45" : ""; }
+$("pBurn").addEventListener("change", () => { settings.profile.addBurn = $("pBurn").checked; saveSettings(); syncAct(); render(); });
 
 /* ---------- 残りのカロリーで食べられそうな食事の案（AIなし） ---------- */
 // 定番の組み合わせ。品目は目安表 FOODS の「名前|量のめやす」で引く
@@ -2246,7 +2248,7 @@ const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoa
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  renderUsage(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn;
+  renderUsage(); $("sDopa").checked = !!settings.dopamine; $("pBurn").checked = !!settings.profile.addBurn; syncAct();
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
