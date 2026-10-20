@@ -56,6 +56,11 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   今週（月曜はじまり）の回数・セット数・総重量（kg×回）、種目ごとの最大重量のグラフと自己ベスト（推定1RMはEpley式、12回以下）。
   スプレッドシートは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量 F回数 G記録ID H メモ I時間 J消費kcal。H〜Jは各記録の1行目だけ）。
   `gym_upsert`（その記録IDの行を消して入れ直す）/ `gym_delete` / `gym_list`。キューの id は `g:記録ID`、記録IDは `gid` で送る。
+- **その日の確定**：トップの「今日の摂取カロリーを確定する」、過去の日は見出しの「確定する」。localStorage `foodlog.closed`
+  （`{日付: {kcal, target, ok, at}}`）。確定後に記録が変わると再確定を促す。
+- **ドーパミン演出**：`settings.dopamine`（設定のトグル、「演出を試す」で確認）。ONで目安以内に確定すると `kakutei()` が
+  虹色の『健康確定！！！』を1文字ずつ出す（集中線・虹の放射・星・閃光2回・揺れ）。閃光は2回までにしている（点滅しすぎない）。
+  効果音は `fxSound()` で Web Audio 合成（音声ファイルなし）。`navigator.audioSession.type = "ambient"` で iPhone の消音スイッチに従う。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。

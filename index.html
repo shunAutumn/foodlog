@@ -172,6 +172,53 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .catseg button[aria-pressed=true]{background:var(--accent); color:var(--accent-ink)}
 .cathead{display:flex; justify-content:space-between; font-size:.82rem; font-weight:800; color:var(--muted); margin:14px 4px 8px}
 .cathead:first-of-type{margin-top:4px}
+/* 確定 */
+.confirmbtn{display:block; width:100%; margin-top:14px; border:0; border-radius:14px; padding:12px; background:var(--ink); color:var(--bg); font-weight:800; font-size:.95rem; cursor:pointer}
+.confirmbtn[disabled]{opacity:.35}
+.closed{margin-top:14px; font-weight:800; color:var(--accent); font-size:.9rem; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.linkbtn{border:0; background:none; color:var(--accent); font-weight:700; font-size:.85rem; padding:0 0 0 6px; cursor:pointer; text-decoration:underline}
+.closed .linkbtn{color:var(--muted)}
+.badge{margin-left:8px; font-size:.68rem; font-weight:800; color:var(--accent-ink); background:var(--accent); border-radius:6px; padding:2px 6px; vertical-align:middle}
+.badge.over{background:var(--label)}
+.chip.small{margin-left:8px; font-size:.72rem; padding:3px 9px; vertical-align:middle}
+/* トグルスイッチ */
+.switch{appearance:none; -webkit-appearance:none; flex:none !important; margin-left:auto; width:51px; height:31px; border-radius:16px; background:var(--surface2); position:relative; cursor:pointer; transition:background .2s; padding:0 !important}
+.switch::after{content:""; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.25); transition:transform .2s}
+.switch:checked{background:var(--accent)}
+.switch:checked::after{transform:translateX(20px)}
+.switch:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+/* 健康確定！！！ */
+#fx{position:fixed; inset:0; z-index:60; overflow:hidden; display:grid; place-items:center; cursor:pointer;
+  background:radial-gradient(circle at 50% 50%, #3a0010 0%, #120006 45%, #000 80%)}
+.fx-rays{position:absolute; inset:-60%; opacity:.55; filter:blur(6px);
+  background:repeating-conic-gradient(from 0deg, #ff004c 0 8deg, #ffb300 8deg 16deg, #fff200 16deg 24deg, #00ff6a 24deg 32deg, #00c8ff 32deg 40deg, #7a00ff 40deg 48deg, #ff00d4 48deg 56deg);
+  animation:fx-spin 6s linear infinite, fx-in .4s ease-out both}
+.fx-lines{position:absolute; inset:-50%;
+  background:repeating-conic-gradient(from 0deg, rgba(255,255,255,.95) 0deg .7deg, transparent .7deg 4.3deg);
+  -webkit-mask:radial-gradient(circle, transparent 16%, #000 40%); mask:radial-gradient(circle, transparent 16%, #000 40%);
+  animation:fx-lines .12s steps(2) infinite, fx-in .3s ease-out both}
+.fx-stage{position:relative; text-align:center; padding:0 12px}
+.fx-text{font-size:min(13vw, 104px); font-weight:900; line-height:1.1; white-space:nowrap; letter-spacing:-.02em}
+.fx-text span{display:inline-block; opacity:0;
+  background:linear-gradient(90deg, #ff004c, #ff8a00, #ffe600, #3dff4e, #00e1ff, #4d5bff, #d400ff, #ff004c); background-size:300% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  -webkit-text-stroke:2px #fff; filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px #ffd000) drop-shadow(0 0 32px #ff2a6d);
+  animation:fx-pop .45s cubic-bezier(.2,1.6,.4,1) forwards, fx-rainbow 1.2s linear infinite}
+.fx-sub{margin-top:18px; font-size:1.3rem; font-weight:900; color:#fff; text-shadow:0 0 10px #ffd000; opacity:0; animation:fx-up .5s ease-out forwards}
+.fx-hint{margin-top:22px; font-size:.8rem; color:rgba(255,255,255,.7); opacity:0; animation:fx-up .5s ease-out forwards}
+.fx-spark{position:absolute; pointer-events:none; text-shadow:0 0 8px currentColor, 0 0 16px #fff; animation:fx-twinkle 1s ease-in-out infinite alternate}
+.fx-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; animation:fx-flash .5s ease-out forwards}
+.fx-stage.shake{animation:fx-shake .5s ease-in-out}
+@keyframes fx-spin{to{transform:rotate(360deg)}}
+@keyframes fx-in{from{opacity:0}}
+@keyframes fx-lines{50%{transform:rotate(1.5deg) scale(1.03)}}
+@keyframes fx-pop{0%{opacity:0; transform:scale(3.2) rotate(-12deg)} 60%{opacity:1; transform:scale(.88)} 100%{opacity:1; transform:scale(1)}}
+@keyframes fx-rainbow{to{background-position:300% 0}}
+@keyframes fx-up{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+@keyframes fx-twinkle{from{opacity:.1; transform:scale(.4) rotate(0)} to{opacity:1; transform:scale(1.2) rotate(40deg)}}
+@keyframes fx-flash{0%{opacity:0} 15%{opacity:.85} 100%{opacity:0}}
+@keyframes fx-shake{0%,100%{transform:none} 20%{transform:translate(-8px,4px)} 40%{transform:translate(7px,-5px)} 60%{transform:translate(-5px,-3px)} 80%{transform:translate(4px,5px)}}
+@media (prefers-reduced-motion: reduce){.fx-rays,.fx-lines{animation:none}}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
 .cmp{display:grid; gap:10px; margin-top:12px}
@@ -260,6 +307,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
     <div class="sub num" id="todayNuts" hidden></div>
     <div class="sub num" id="todayBurn" hidden></div>
+    <div id="dayCloseBox"></div>
     <div class="week" id="week" aria-label="直近7日間"></div>
   </section>
 
@@ -317,6 +365,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
 </div>
 
 <div class="scrim" id="scrim"></div>
+<div id="fx" hidden role="dialog" aria-label="健康確定"></div>
 
 <!-- meal sheet -->
 <div class="sheet" id="mealSheet" role="dialog" aria-modal="true" aria-labelledby="mealTitle">
@@ -408,6 +457,12 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
         </select></div>
     </div>
     <p class="help">キーはこのスマホの中にだけ保存され、Anthropicにだけ送られます。</p>
+
+    <div class="cap">演出</div>
+    <div class="group">
+      <div class="row"><label for="sDopa">ドーパミン中毒のガキ向け演出</label><input type="checkbox" id="sDopa" class="switch" role="switch"></div>
+    </div>
+    <p class="help">ONにすると、目安カロリー以内で「確定」したときに派手な演出が出ます。効果音はマナーモードでないときだけ鳴ります。<button type="button" class="linkbtn" id="sDopaTry">演出を試す</button></p>
 
     <div class="cap">今月の読み取り（API使用量）</div>
     <div class="group" id="usageBox"></div>
@@ -580,6 +635,7 @@ function render(){
   $("todayBurn").textContent = tb ? `筋トレで 約${fmt(tb)} kcal 消費${pl ? "（目安カロリーには含めていません）" : ""}` : "";
   $("todayBurn").hidden = !tb;
   renderWeight(pl);
+  renderClose();
   const tn = nutLine(todays.flatMap(m => m.items || []));
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
 
@@ -611,6 +667,9 @@ function render(){
     h2.textContent = k === tk ? "今日" : k === yk ? "昨日" : `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）`;
     const s = document.createElement("span"); s.className = "sum num";
     s.textContent = `${fmt(arr.reduce((t, m) => t + (m.total || 0), 0))} kcal・${new Set(arr.map(mealCat)).size}食`;
+    const cl = readClosed()[k];
+    if (cl) h2.append(el("span", "badge" + (cl.ok === false ? " over" : ""), "確定"));
+    else if (k !== tk){ const cb = el("button", "chip small", "確定する"); cb.type = "button"; cb.addEventListener("click", () => closeDay(k)); h2.append(cb); }
     h.append(h2, s);
     sec.append(h);
     for (const cat of CATS){
@@ -1853,6 +1912,108 @@ function drawGymChart(name){
   mk("circle", { cx:X(lp[0]), cy:Y(lp[1]), r:4.5, fill:"var(--surface)", stroke:"var(--accent)", "stroke-width":2.5 });
 }
 
+/* ---------- その日の摂取カロリーを確定 ---------- */
+const CKEY = "foodlog.closed";
+const readClosed = () => { try { return JSON.parse(localStorage.getItem(CKEY) || "{}"); } catch { return {}; } };
+const writeClosed = c => { try { localStorage.setItem(CKEY, JSON.stringify(c)); } catch {} };
+const dayTotal = k => meals.filter(m => dayKey(m.eatenAt) === k).reduce((s, m) => s + (m.total || 0), 0);
+function closeDay(k){
+  const kcal = dayTotal(k), pl = plan(), target = pl ? pl.target : null, ok = target ? kcal <= target : null;
+  const c = readClosed(); c[k] = { kcal, target, ok, at:Date.now() }; writeClosed(c);
+  render();
+  const label = k === dayKey(Date.now()) ? "今日" : `${Number(k.slice(5, 7))}月${Number(k.slice(8))}日`;
+  if (ok && settings.dopamine) return kakutei(kcal, target);
+  $("syncline").textContent = target == null ? `${label}の摂取カロリーを ${fmt(kcal)} kcal で確定しました。`
+    : ok ? `${label}は ${fmt(kcal)} / ${fmt(target)} kcal で確定しました。目安以内です。`
+    : `${label}は ${fmt(kcal)} / ${fmt(target)} kcal で確定しました。目安を ${fmt(kcal - target)} kcal 超えています。`;
+}
+function unclose(k){ const c = readClosed(); delete c[k]; writeClosed(c); render(); }
+function renderClose(){
+  const k = dayKey(Date.now()), c = readClosed()[k], kcal = dayTotal(k), box = $("dayCloseBox"); box.textContent = "";
+  if (c && c.kcal === kcal){
+    const t = el("div", "closed num", `✓ 今日は ${fmt(c.kcal)} kcal で確定済み${c.ok === true ? "（目安以内）" : c.ok === false ? "（目安オーバー）" : ""}`);
+    const u = el("button", "linkbtn", "取り消す"); u.type = "button"; u.addEventListener("click", () => unclose(k));
+    t.append(u); box.append(t);
+  } else {
+    const b = el("button", "confirmbtn", c ? "記録が変わりました。もう一度確定する" : "今日の摂取カロリーを確定する"); b.type = "button";
+    b.disabled = !meals.some(m => dayKey(m.eatenAt) === k);
+    b.addEventListener("click", () => closeDay(k));
+    box.append(b);
+  }
+}
+
+/* ---------- ドーパミン演出：健康確定！！！ ---------- */
+function kakutei(kcal, target){
+  const fx = $("fx"); fx.textContent = ""; fx.hidden = false;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const add = (cls, parent = fx) => { const e = el("div", cls); parent.append(e); return e; };
+  add("fx-rays"); add("fx-lines");
+  const stage = add("fx-stage");
+  const text = add("fx-text", stage);
+  const chars = [..."健康確定！！！"], step = reduce ? 0.12 : 0.32, last = 0.6 + chars.length * step;
+  chars.forEach((ch, i) => { const s = el("span", null, ch); s.style.animationDelay = `${0.6 + i * step}s, 0s`; text.append(s); });
+  const sub = add("fx-sub num", stage); sub.textContent = `${fmt(kcal)} / ${fmt(target)} kcal`;
+  sub.style.animationDelay = `${last + 0.3}s`;
+  const hint = add("fx-hint", stage); hint.textContent = "タップで閉じる";
+  hint.style.animationDelay = `${last + 1}s`;
+  // ギラギラ（ランダムな星）
+  for (let i = 0; i < (reduce ? 0 : 46); i++){
+    const s = el("span", "fx-spark", i % 3 ? "✦" : "★");
+    s.style.left = `${Math.random() * 100}%`; s.style.top = `${Math.random() * 100}%`;
+    s.style.fontSize = `${10 + Math.random() * 26}px`; s.style.color = `hsl(${Math.random() * 360},100%,70%)`;
+    s.style.animationDelay = `${Math.random() * 1.6}s`; s.style.animationDuration = `${0.6 + Math.random() * 0.9}s`;
+    fx.append(s);
+  }
+  // 白い閃光：最初と、全部出たときの2回だけ（点滅しすぎないように）
+  if (!reduce){
+    const f1 = add("fx-flash"); f1.style.animationDelay = "0.45s";
+    const f2 = add("fx-flash"); f2.style.animationDelay = `${last}s`;
+    stage.style.animationDelay = `${last - step}s`; stage.classList.add("shake");
+  }
+  fxSound(chars.length, step);
+  const close = () => { fx.hidden = true; fx.textContent = ""; clearTimeout(timer); };
+  const timer = setTimeout(close, (last + 4.5) * 1000);
+  fx.onclick = close;
+}
+
+// 効果音：Web Audio で作る。iPhoneではマナーモード（消音スイッチ）中は鳴らない
+let actx = null;
+function fxSound(n, step){
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "ambient"; // 消音スイッチに従う
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+  } catch { return; }
+  const ctx = actx, t0 = ctx.currentTime + 0.05, out = ctx.createGain();
+  out.gain.value = 0.22; out.connect(ctx.destination);
+  const tone = (type, f0, f1, at, dur, vol) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, at); if (f1) o.frequency.exponentialRampToValueAtTime(f1, at + dur);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g); g.connect(out); o.start(at); o.stop(at + dur + 0.05);
+  };
+  // キュイーン（上がっていく音）
+  tone("sawtooth", 220, 2600, t0, 0.55, 0.35);
+  tone("square", 330, 3900, t0 + 0.02, 0.55, 0.12);
+  // 1文字ごとにドン＋キラン（だんだん高く）
+  const scale = [523, 587, 659, 784, 880, 1047, 1175];
+  for (let i = 0; i < n; i++){
+    const at = t0 + 0.55 + i * step;
+    tone("sine", 150, 45, at, 0.25, 0.9);
+    tone("triangle", scale[i % scale.length], 0, at, 0.35, 0.5);
+    tone("square", scale[i % scale.length] * 2, 0, at, 0.12, 0.12);
+  }
+  // 確定ファンファーレ（ドミソドの和音を伸ばす）
+  const end = t0 + 0.55 + n * step;
+  [523, 659, 784, 1047].forEach((f, i) => {
+    tone("triangle", f, 0, end + i * 0.07, 1.8, 0.35);
+    tone("sawtooth", f / 2, 0, end + i * 0.07, 1.6, 0.06);
+  });
+  tone("sine", 2093, 0, end + 0.3, 1.2, 0.15);
+}
+$("sDopa").addEventListener("change", () => { settings.dopamine = $("sDopa").checked; saveSettings(); });
+$("sDopaTry").addEventListener("click", () => { const pl = plan(); hide(); kakutei(pl ? Math.round(pl.target * 0.9) : 1500, pl ? pl.target : 1700); });
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -1919,7 +2080,7 @@ const PFIELDS = { pSex:"sex", pBirth:"birth", pHeight:"height", pAct:"act", pGoa
 function openSettings(){
   for (const [id, k] of Object.entries(PFIELDS)) $(id).value = settings.profile[k] ?? "";
   $("sKey").value = settings.key; $("sModel").value = settings.model; $("sUrl").value = settings.url; $("sToken").value = settings.token;
-  renderUsage();
+  renderUsage(); $("sDopa").checked = !!settings.dopamine;
   setStatus($("sStatus"), ""); setStatus($("mvStatus"), ""); $("mvBox").hidden = $("mvApply").hidden = true;
   show($("setSheet"));
 }
@@ -2036,7 +2197,7 @@ $("sImport").addEventListener("click", async () => {
 const MOVE = "foodlog-move:";
 $("mvCopy").addEventListener("click", async () => {
   grab();
-  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, workouts, queue:readQ() });
+  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, workouts, closed:readClosed(), queue:readQ() });
   try {
     await navigator.clipboard.writeText(text);
     setStatus($("mvStatus"), `コピーしました（記録${meals.length}件）。移した先で「貼り付けて取り込む」を押してください。`);
@@ -2062,6 +2223,8 @@ async function importMove(text){
   try {
     for (const k of ["key", "model", "url", "token"]) if (s[k]) settings[k] = String(s[k]);
     if (s.profile && typeof s.profile === "object") Object.assign(settings.profile, s.profile);
+    if (typeof s.dopamine === "boolean") settings.dopamine = s.dopamine;
+    if (d.closed && typeof d.closed === "object") writeClosed({ ...d.closed, ...readClosed() });
     saveSettings();
     for (const w of Array.isArray(d.weights) ? d.weights : []){
       if (!w || !/^\d{4}-\d{2}-\d{2}$/.test(w.date) || !(w.kg > 0)) continue;
