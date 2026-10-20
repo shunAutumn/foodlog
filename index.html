@@ -232,6 +232,26 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .idea .ideameta{font-size:.78rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .ideas .linkbtn{margin-top:10px; padding-left:2px}
 .plan .warn{color:var(--label); font-size:.82rem; margin-top:4px}
+/* 顔・体の記録 */
+.bpstrip{display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x proximity; margin:12px -20px 0; padding:0 20px 4px; scrollbar-width:none}
+.bpstrip::-webkit-scrollbar{display:none}
+.bpthumb{position:relative; flex:none; width:96px; aspect-ratio:3/4; border:0; padding:0; border-radius:14px; overflow:hidden; background:var(--surface2); cursor:pointer; scroll-snap-align:end}
+.bpthumb img{width:100%; height:100%; object-fit:cover; display:block}
+.bpthumb .bpdate,.bpthumb .bpw{position:absolute; left:6px; font-size:.68rem; font-weight:800; color:#fff; background:rgba(10,12,11,.55); border-radius:999px; padding:2px 7px}
+.bpthumb .bpdate{bottom:6px} .bpthumb .bpw{top:6px}
+.bpempty{color:var(--muted); font-size:.85rem; margin:12px 2px 0}
+.bpempty[hidden]{display:none}
+.bppreview{display:block; max-width:100%; max-height:46vh; margin:0 auto; border-radius:18px}
+#bpView{position:fixed; inset:0; z-index:55; background:#000; display:flex; flex-direction:column}
+.bpbar{display:flex; align-items:center; justify-content:space-between; padding:calc(env(safe-area-inset-top) + 8px) 12px 8px; color:#fff}
+.bpbar button{border:0; background:rgba(255,255,255,.14); color:#fff; font:inherit; font-weight:700; border-radius:999px; min-width:40px; height:36px; padding:0 14px; cursor:pointer}
+.bpbar #bpClose{font-size:1.3rem; padding:0}
+.bptrack{flex:1; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none}
+.bptrack::-webkit-scrollbar{display:none}
+.bpslide{flex:none; width:100%; height:100%; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:0 12px calc(env(safe-area-inset-bottom) + 16px)}
+.bpslide img{max-width:100%; max-height:calc(100% - 70px); object-fit:contain; border-radius:12px}
+.bpcap{color:#fff; text-align:center; display:flex; flex-direction:column; gap:2px; font-size:.9rem}
+.bpcap span{color:rgba(255,255,255,.75); font-size:.82rem}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
 .photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
@@ -332,6 +352,15 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="plan" id="wPlan"></div>
   </section>
 
+  <section class="card" aria-labelledby="bpTitle">
+    <div class="cardhead"><h2 id="bpTitle">顔・体の記録</h2><button class="chip" id="bpAdd" type="button">＋ 撮る</button></div>
+    <div class="ranges" id="bpKinds" role="group" aria-label="写真の種類"><button type="button" data-k="face">顔</button><button type="button" data-k="body">体</button></div>
+    <div class="bpstrip" id="bpStrip"></div>
+    <p class="bpempty" id="bpEmpty"></p>
+    <p class="help" style="margin:8px 2px 0">記録はしたい日だけでOK。写真はこのスマホの中だけに保存され、スプレッドシートやドライブには送りません。</p>
+    <input type="file" id="bpFile" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+  </section>
+
   <div class="notice" id="setupNotice" hidden>
     <span>APIキーを入れると、写真から料理とカロリーを読み取れます。</span>
     <button type="button" id="setupBtn">設定する</button>
@@ -374,6 +403,10 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
 
 <div class="scrim" id="scrim"></div>
 <div id="fx" hidden role="dialog" aria-label="健康確定"></div>
+<div id="bpView" hidden role="dialog" aria-modal="true" aria-label="顔・体の写真">
+  <div class="bpbar"><button type="button" id="bpClose" aria-label="閉じる">×</button><span class="num" id="bpCount"></span><button type="button" id="bpDel">削除</button></div>
+  <div class="bptrack" id="bpTrack"></div>
+</div>
 
 <!-- meal sheet -->
 <div class="sheet" id="mealSheet" role="dialog" aria-modal="true" aria-labelledby="mealTitle">
@@ -429,6 +462,22 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <button class="btn primary" id="gSave" type="button">記録する</button>
     <button class="btn plain" id="gCancel" type="button">キャンセル</button>
     <button class="btn danger" id="gDel" type="button" hidden>このトレーニングを削除</button>
+  </div>
+</div>
+
+<!-- body photo sheet -->
+<div class="sheet" id="bpSheet" role="dialog" aria-modal="true" aria-labelledby="bpsTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="bpsTitle">顔・体の記録</h3>
+    <img class="bppreview" id="bpPreview" alt="">
+    <div class="group" style="margin-top:12px">
+      <div class="row"><label>種類</label><div class="catseg" id="bpKindSeg" role="group" aria-label="写真の種類"></div></div>
+      <div class="row"><label for="bpDate">日付</label><input type="date" id="bpDate" style="text-align:right"></div>
+    </div>
+    <div class="status" id="bpStatus"></div>
+    <button class="btn primary" id="bpSave" type="button">記録する</button>
+    <button class="btn plain" id="bpCancel" type="button">キャンセル</button>
   </div>
 </div>
 
@@ -557,7 +606,7 @@ const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(set
 const DB = (() => {
   let p;
   const open = () => p || (p = new Promise((res, rej) => {
-    const r = indexedDB.open("foodlog", 4);
+    const r = indexedDB.open("foodlog", 5);
     r.onupgradeneeded = () => {
       const db = r.result;
       if (!db.objectStoreNames.contains("meals")) db.createObjectStore("meals", { keyPath:"id" });
@@ -567,6 +616,9 @@ const DB = (() => {
       if (!db.objectStoreNames.contains("weights")) db.createObjectStore("weights", { keyPath:"date" });
       // 筋トレ {id, at(ms), items:[{name, sets:[{kg, reps}]}], memo, savedAt}
       if (!db.objectStoreNames.contains("workouts")) db.createObjectStore("workouts", { keyPath:"id" });
+      // 顔・体の写真 {id, kind:"face"|"body", date, thumb, savedAt}／大きい写真 {id, data}
+      if (!db.objectStoreNames.contains("bodyphotos")) db.createObjectStore("bodyphotos", { keyPath:"id" });
+      if (!db.objectStoreNames.contains("bodyimgs")) db.createObjectStore("bodyimgs", { keyPath:"id" });
     };
     r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
     r.onerror = () => rej(r.error);
@@ -586,17 +638,22 @@ const DB = (() => {
     delW: date => tx("weights", "readwrite", s => s.delete(date)),
     allG: () => tx("workouts", "readonly", s => s.getAll()),
     putG: g => tx("workouts", "readwrite", s => s.put(g)),
-    delG: id => tx("workouts", "readwrite", s => s.delete(id))
+    delG: id => tx("workouts", "readwrite", s => s.delete(id)),
+    allBP: () => tx("bodyphotos", "readonly", s => s.getAll()),
+    putBP: async (p, data) => { await tx("bodyimgs", "readwrite", s => s.put({ id:p.id, data })); return tx("bodyphotos", "readwrite", s => s.put(p)); },
+    bpImg: id => tx("bodyimgs", "readonly", s => s.get(id)),
+    delBP: async id => { await tx("bodyimgs", "readwrite", s => s.delete(id)); return tx("bodyphotos", "readwrite", s => s.delete(id)); }
   };
 })();
 
 let meals = [];
-let weights = [], workouts = [];
+let weights = [], workouts = [], bodyPhotos = [];
 const sortW = () => weights.sort((a, b) => a.date < b.date ? -1 : 1);
 async function load(){
   try { meals = (await DB.all()) || []; } catch { meals = []; }
   try { weights = (await DB.allW()) || []; sortW(); } catch { weights = []; }
   try { workouts = (await DB.allG()) || []; } catch { workouts = []; }
+  try { bodyPhotos = (await DB.allBP()) || []; } catch { bodyPhotos = []; }
   render();
 }
 
@@ -648,6 +705,7 @@ function render(){
   $("todayBurn").hidden = !tb;
   renderWeight(pl);
   renderClose();
+  renderBodyPhotos();
   renderIdeas(todays, pl ? tgt - tTotal : null);
   const tn = nutLine(todays.flatMap(m => m.items || []));
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
@@ -2141,6 +2199,117 @@ function renderIdeas(todays, left){
     box.append(more);
   }
 }
+
+/* ---------- 顔・体の記録（写真はこのスマホの中だけ。シートやドライブには送らない） ---------- */
+const BP_KINDS = { face:"顔", body:"体" };
+let bpKind = "face";
+try { bpKind = localStorage.getItem("foodlog.bpKind") === "body" ? "body" : "face"; } catch {}
+let bpDraft = null;
+const bpOf = kind => bodyPhotos.filter(p => p.kind === kind).sort((a, b) => a.date < b.date ? -1 : 1);
+// その日の体重（なければ3日以内の前の記録）
+function weightNear(date){
+  const t = dms(date);
+  const w = [...weights].reverse().find(x => x.date <= date && t - dms(x.date) <= 3 * 864e5);
+  return w ? w : null;
+}
+function renderBodyPhotos(){
+  for (const b of $("bpKinds").children) b.setAttribute("aria-pressed", String(b.dataset.k === bpKind));
+  const strip = $("bpStrip"); strip.textContent = "";
+  const list = bpOf(bpKind);
+  $("bpEmpty").hidden = list.length > 0;
+  $("bpEmpty").textContent = `「＋ 撮る」で${BP_KINDS[bpKind]}の写真を記録すると、ここに日付順に並びます。`;
+  list.forEach((p, i) => {
+    const b = el("button", "bpthumb"); b.type = "button";
+    const im = el("img"); im.src = p.thumb; im.alt = `${p.date} の${BP_KINDS[p.kind]}`; im.loading = "lazy";
+    const w = weightNear(p.date);
+    b.append(im, el("span", "bpdate num", `${Number(p.date.slice(5, 7))}/${Number(p.date.slice(8))}`));
+    if (w) b.append(el("span", "bpw num", `${w.kg.toFixed(1)}kg`));
+    b.addEventListener("click", () => openBpView(bpKind, i));
+    strip.append(b);
+  });
+  strip.scrollLeft = strip.scrollWidth; // いちばん新しい写真（右端）を見せる
+}
+$("bpKinds").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  bpKind = b.dataset.k; try { localStorage.setItem("foodlog.bpKind", bpKind); } catch {}
+  renderBodyPhotos();
+});
+
+// 撮る → 確認画面（顔か体か・日付を選んで保存）
+$("bpAdd").addEventListener("click", () => { $("bpFile").value = ""; $("bpFile").click(); });
+$("bpFile").addEventListener("change", async () => {
+  const f = $("bpFile").files && $("bpFile").files[0]; if (!f) return;
+  let thumb = "", big = "";
+  try { thumb = await shrink(f, 360, .75); big = await shrink(f, 1280, .85); } catch {}
+  if (!big) return alert("写真を読み込めませんでした。別の写真で試してください。");
+  const now = Date.now(), t = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
+  bpDraft = { kind:bpKind, date:ymd(t), thumb, big };
+  $("bpPreview").src = thumb; $("bpDate").value = bpDraft.date;
+  renderBpKindSeg(); setStatus($("bpStatus"), "");
+  show($("bpSheet"));
+});
+function renderBpKindSeg(){
+  const box = $("bpKindSeg"); box.textContent = "";
+  for (const [k, label] of Object.entries(BP_KINDS)){
+    const b = el("button", null, label); b.type = "button"; b.setAttribute("aria-pressed", String(bpDraft.kind === k));
+    b.addEventListener("click", () => { bpDraft.kind = k; renderBpKindSeg(); });
+    box.append(b);
+  }
+}
+$("bpCancel").addEventListener("click", hide);
+$("bpSave").addEventListener("click", async () => {
+  if (!bpDraft) return;
+  const date = $("bpDate").value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return setStatus($("bpStatus"), "日付を選んでください。", "err");
+  const same = bodyPhotos.find(p => p.kind === bpDraft.kind && p.date === date);
+  if (same && !confirm(`${date} の${BP_KINDS[bpDraft.kind]}の写真を、この写真に置き換えますか？`)) return;
+  const p = { id:same ? same.id : newId(), kind:bpDraft.kind, date, thumb:bpDraft.thumb, savedAt:Date.now() };
+  try {
+    await DB.putBP(p, bpDraft.big);
+    bodyPhotos = bodyPhotos.filter(x => x.id !== p.id).concat(p);
+    bpKind = p.kind; try { localStorage.setItem("foodlog.bpKind", bpKind); } catch {}
+    bpDraft = null; hide(); render();
+  } catch { setStatus($("bpStatus"), "保存できませんでした。もう一度押してください。", "err"); }
+});
+
+// 全画面で見る：左右にスワイプして日付を行き来する
+let bpViewList = [];
+async function openBpView(kind, index){
+  bpViewList = bpOf(kind);
+  const v = $("bpView"), track = $("bpTrack"); track.textContent = "";
+  bpViewList.forEach((p, i) => {
+    const slide = el("div", "bpslide");
+    const im = el("img"); im.alt = `${p.date} の${BP_KINDS[p.kind]}`; im.src = p.thumb; // まず小さい写真、あとで大きい写真に差し替え
+    const w = weightNear(p.date), prev = i > 0 ? weightNear(bpViewList[i - 1].date) : null;
+    const d = new Date(dms(p.date));
+    const cap = el("div", "bpcap num");
+    cap.append(el("b", null, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WEEK[d.getDay()]}）`));
+    if (w) cap.append(el("span", null, `${w.kg.toFixed(1)}kg${prev ? `（前の写真から ${w.kg - prev.kg >= 0 ? "+" : "−"}${Math.abs(w.kg - prev.kg).toFixed(1)}kg）` : ""}`));
+    slide.append(im, cap); track.append(slide);
+    DB.bpImg(p.id).then(r => { if (r && r.data) im.src = r.data; }).catch(() => {});
+  });
+  v.hidden = false; document.body.style.overflow = "hidden";
+  bpAt = index; track.scrollLeft = index * track.clientWidth; bpCounter(); // すぐに位置を合わせる（削除する写真がずれないように）
+}
+// 今見ている写真の番号（スクロールで更新）
+let bpAt = 0;
+const bpIndex = () => Math.min(bpViewList.length - 1, Math.max(0, bpAt));
+function bpCounter(){ $("bpCount").textContent = bpViewList.length ? `${bpIndex() + 1} / ${bpViewList.length}` : ""; }
+$("bpTrack").addEventListener("scroll", () => { const t = $("bpTrack"); if (t.clientWidth) bpAt = Math.round(t.scrollLeft / t.clientWidth); bpCounter(); }, { passive:true });
+function closeBpView(){ $("bpView").hidden = true; $("bpTrack").textContent = ""; document.body.style.overflow = ""; }
+$("bpClose").addEventListener("click", closeBpView);
+document.addEventListener("keydown", e => {
+  if ($("bpView").hidden) return;
+  if (e.key === "Escape") closeBpView();
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") $("bpTrack").scrollBy({ left:(e.key === "ArrowRight" ? 1 : -1) * $("bpTrack").clientWidth, behavior:"smooth" });
+});
+$("bpDel").addEventListener("click", async () => {
+  const p = bpViewList[bpIndex()]; if (!p || !confirm(`${p.date} の${BP_KINDS[p.kind]}の写真を削除しますか？`)) return;
+  await DB.delBP(p.id).catch(() => {});
+  bodyPhotos = bodyPhotos.filter(x => x.id !== p.id);
+  const i = bpIndex(); closeBpView(); render();
+  if (bpOf(p.kind).length) openBpView(p.kind, Math.max(0, i - 1));
+});
 
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
