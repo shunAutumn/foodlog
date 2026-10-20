@@ -76,6 +76,13 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .wnow .unit{font-size:.95rem; font-weight:700; color:var(--muted); margin-left:4px}
 .wdelta{margin-left:10px; font-size:.85rem; font-weight:700; color:var(--muted)}
 .card .sub{color:var(--muted); font-size:.85rem; margin-top:4px}
+.pace{margin-top:8px; font-size:.85rem; line-height:1.6; padding:8px 12px; border-radius:12px; background:var(--surface2)}
+.pace b{font-weight:800}
+.pace .ok{color:var(--accent); font-weight:800}
+.pace .ng{color:var(--label); font-weight:800}
+.legend{display:flex; gap:14px; justify-content:flex-end; font-size:.7rem; color:var(--muted); margin-top:2px}
+.legend i{display:inline-block; width:14px; height:0; border-top:2px dotted var(--muted); vertical-align:middle; margin-right:4px}
+.legend i.g{border-top:2px dashed var(--label)}
 .ranges{display:flex; gap:6px; margin-top:12px}
 .ranges button{flex:1; border:0; background:var(--surface2); color:var(--muted); font-weight:700; font-size:.78rem; border-radius:999px; padding:6px 0; cursor:pointer}
 .ranges button[aria-pressed=true]{background:var(--ink); color:var(--bg)}
@@ -214,10 +221,12 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="cardhead"><h2 id="wTitle">体重</h2><button class="chip" id="wAdd" type="button">＋ 記録</button></div>
     <div class="wnow"><span class="big2 num" id="wNow">—</span><span class="unit">kg</span><span class="wdelta num" id="wDelta"></span></div>
     <div class="sub" id="wGoalLine"></div>
+    <div class="pace" id="wPace" hidden></div>
     <div class="ranges" id="wRanges" role="group" aria-label="グラフの期間">
-      <button type="button" data-d="30">1か月</button><button type="button" data-d="90">3か月</button><button type="button" data-d="365">1年</button><button type="button" data-d="0">全部</button>
+      <button type="button" data-m="d">日</button><button type="button" data-m="w">週</button><button type="button" data-m="m">月</button><button type="button" data-m="y">年</button>
     </div>
     <svg id="wChart" viewBox="0 0 320 160" role="img" aria-label="体重の推移"></svg>
+    <div class="legend" id="wLegend" hidden><span><i></i>順調なときの目安</span><span><i class="g"></i>目標</span></div>
     <div class="plan" id="wPlan"></div>
   </section>
 
@@ -511,10 +520,32 @@ function render(){
 }
 
 /* ---------- 体重カード ---------- */
-let wRange = 30;
-try { wRange = Number(localStorage.getItem("foodlog.wRange") ?? 30); } catch {}
+const DAY = 864e5, WEEK_MS = 7 * DAY;
 const ymd = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 const dms = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d, 12).getTime(); };
+const md = t => { const d = new Date(t); return `${d.getMonth()+1}/${d.getDate()}`; };
+let wMode = "d";
+try { wMode = localStorage.getItem("foodlog.wMode") || "d"; } catch {}
+
+// 目標に向けた「順調なら何kg」の線。目標かペースを変えたときの最新の体重を出発点にする
+function ensureStart(pl){
+  const p = settings.profile, last = weights[weights.length - 1];
+  if (!pl || !pl.dir || !last){ return null; }
+  const s = p.start;
+  if (!s || s.goal !== p.goal || s.pref !== p.pace){
+    p.start = { date:last.date, kg:last.kg, rate:Math.round(pl.pace * 1000) / 1000, goal:p.goal, pref:p.pace };
+    saveSettings();
+  }
+  return p.start;
+}
+// 出発点から rate kg/週 で目標へ。着いたらそのまま
+function planAt(s, t){
+  const goal = Number(s.goal), dir = Math.sign(goal - s.kg);
+  const v = s.kg + dir * s.rate * (t - dms(s.date)) / WEEK_MS;
+  return dir < 0 ? Math.max(goal, v) : Math.min(goal, v);
+}
+const planEnd = s => dms(s.date) + Math.abs(Number(s.goal) - s.kg) / s.rate * WEEK_MS;
+
 function renderWeight(pl){
   const last = weights[weights.length - 1], goal = Number(settings.profile.goal) || 0;
   $("wNow").textContent = last ? last.kg.toFixed(1) : "—";
@@ -528,8 +559,23 @@ function renderWeight(pl){
     gl = Math.abs(gap) < 0.05 ? `目標 ${goal.toFixed(1)}kg 達成！` : `目標 ${goal.toFixed(1)}kg まで あと ${Math.abs(gap).toFixed(1)}kg${gap < 0 ? "（増やす）" : ""}`;
   }
   $("wGoalLine").textContent = gl;
-  for (const b of $("wRanges").children) b.setAttribute("aria-pressed", String(Number(b.dataset.d) === wRange));
-  drawChart(goal);
+
+  // 順調かどうか
+  const start = ensureStart(pl), pb = $("wPace"); pb.textContent = ""; pb.hidden = !start;
+  if (start){
+    const t = dms(last.date), should = planAt(start, t), gap = last.kg - should, dir = Math.sign(goal - start.kg);
+    const behind = dir < 0 ? gap > 0.2 : gap < -0.2;
+    const l1 = el("div");
+    l1.append(`順調なら ${md(t)} は `, el("b", "num", `${should.toFixed(1)}kg`), "　");
+    l1.append(behind ? el("span", "ng", `目安より ${gap > 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}kg`) : el("span", "ok", "順調です"));
+    const next = Math.min(t + 30 * DAY, Math.max(t + DAY, planEnd(start)));
+    const l2 = el("div", null, planEnd(start) <= t + DAY ? "目標の時期を過ぎています。このまま目標を目指しましょう。"
+      : `${md(next)} には ${planAt(start, next).toFixed(1)}kg、${md(planEnd(start))} ごろ目標の ${goal.toFixed(1)}kg が目安です。`);
+    pb.append(l1, l2);
+  }
+
+  for (const b of $("wRanges").children) b.setAttribute("aria-pressed", String(b.dataset.m === wMode));
+  drawChart(goal, start);
 
   const box = $("wPlan"); box.textContent = "";
   if (!pl){
@@ -547,19 +593,42 @@ function renderWeight(pl){
   box.append(head, d1, d2);
   if (pl.floored) box.append(el("div", "muted", "体に負担がないよう、基礎代謝を下回らない量にしています。"));
 }
-function drawChart(goal){
+
+// 日＝1日ごと／週・月・年＝その期間の平均。少し先まで表示して、目安の線の行き先も見えるようにする
+const MODES = {
+  d:{ back:20 * DAY, fwd:10 * DAY, key:t => ymd(t) },
+  w:{ back:16 * WEEK_MS, fwd:10 * WEEK_MS, key:t => { const d = new Date(t); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d.getTime()); } },
+  m:{ back:270 * DAY, fwd:90 * DAY, key:t => ymd(t).slice(0, 7) },
+  y:{ back:365 * DAY, fwd:0, key:t => ymd(t).slice(0, 4) }
+};
+function drawChart(goal, start){
   const svg = $("wChart"), W = 320, H = 160, L = 30, R = 8, T = 10, B = 22;
   svg.textContent = "";
   const NS = "http://www.w3.org/2000/svg";
   const mk = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.append(e); return e; };
-  const now = dms(ymd(Date.now()));
-  const from = wRange ? now - (wRange - 1) * 864e5 : (weights.length ? dms(weights[0].date) : now);
-  const pts = weights.filter(w => dms(w.date) >= from).map(w => [dms(w.date), w.kg]);
-  if (!pts.length){ mk("text", { x:W / 2, y:H / 2, "text-anchor":"middle" }, "「＋ 記録」で体重を入れるとグラフになります"); return; }
-  const vals = pts.map(p => p[1]).concat(goal ? [goal] : []);
+  const mode = MODES[wMode] || MODES.d, now = dms(ymd(Date.now()));
+  let x0 = now - mode.back, x1 = now + mode.fwd;
+  if (wMode === "y"){
+    if (weights.length) x0 = Math.min(x0, dms(weights[0].date));
+    if (start) x1 = Math.min(now + 3 * 365 * DAY, Math.max(x1, planEnd(start) + 30 * DAY));
+  }
+  // 期間ごとの平均（点は、その期間に記録した日の平均の位置に置く）
+  const groups = new Map();
+  for (const w of weights){ const t = dms(w.date), k = mode.key(t); (groups.get(k) || groups.set(k, []).get(k)).push([t, w.kg]); }
+  const avg = (a, i) => a.reduce((s, v) => s + v[i], 0) / a.length;
+  const pts = [...groups.values()].map(a => [avg(a, 0), avg(a, 1)]).filter(p => p[0] >= x0 - DAY && p[0] <= x1 + DAY).sort((a, b) => a[0] - b[0]);
+  // 目安の線（出発点より前は引かない）
+  const planPts = [];
+  if (start){
+    const s0 = dms(start.date), e = planEnd(start);
+    for (const t of [Math.max(x0, s0), e, x1]) if (t >= Math.max(x0, s0) && t <= x1) planPts.push([t, planAt(start, t)]);
+  }
+  $("wLegend").hidden = !planPts.length;
+  if (!pts.length && !planPts.length){ mk("text", { x:W / 2, y:H / 2, "text-anchor":"middle" }, "「＋ 記録」で体重を入れるとグラフになります"); return; }
+  const vals = pts.map(p => p[1]).concat(planPts.map(p => p[1]), goal ? [goal] : []);
   let lo = Math.min(...vals), hi = Math.max(...vals);
   const padY = Math.max(0.5, (hi - lo) * 0.15); lo = Math.floor((lo - padY) * 2) / 2; hi = Math.ceil((hi + padY) * 2) / 2;
-  const x0 = Math.min(from, pts[0][0]), x1 = Math.max(now, pts[pts.length - 1][0]), span = Math.max(864e5, x1 - x0);
+  const span = Math.max(DAY, x1 - x0);
   const X = t => L + (t - x0) / span * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
   // 目盛り（横線3本）
   for (let i = 0; i <= 2; i++){
@@ -567,16 +636,23 @@ function drawChart(goal){
     mk("line", { x1:L, x2:W - R, y1:Y(v), y2:Y(v), stroke:"var(--line)", "stroke-width":1 });
     mk("text", { x:L - 4, y:Y(v) + 3, "text-anchor":"end" }, v.toFixed(1));
   }
-  // 日付（左端・右端）
-  const md = t => { const d = new Date(t); return `${d.getMonth()+1}/${d.getDate()}`; };
-  mk("text", { x:L, y:H - 6 }, md(x0));
-  mk("text", { x:W - R, y:H - 6, "text-anchor":"end" }, md(x1));
+  // 日付（左端・今日・右端）
+  const lab = t => wMode === "y" ? String(new Date(t).getFullYear()) : wMode === "m" ? `${new Date(t).getMonth() + 1}月` : md(t);
+  mk("text", { x:L, y:H - 6 }, lab(x0));
+  if (x1 > now){
+    mk("line", { x1:X(now), x2:X(now), y1:T, y2:H - B, stroke:"var(--line)", "stroke-width":1 });
+    mk("text", { x:X(now), y:H - 6, "text-anchor":"middle" }, "今日");
+    if (X(x1) - X(now) > 40) mk("text", { x:W - R, y:H - 6, "text-anchor":"end" }, lab(x1));
+  } else mk("text", { x:W - R, y:H - 6, "text-anchor":"end" }, lab(x1));
   // 目標（破線）
   if (goal){
     mk("line", { x1:L, x2:W - R, y1:Y(goal), y2:Y(goal), stroke:"var(--label)", "stroke-width":1.5, "stroke-dasharray":"4 4" });
-    mk("text", { x:W - R, y:Y(goal) - 4, "text-anchor":"end", style:"fill:var(--label); font-weight:700" }, `目標 ${goal.toFixed(1)}`);
+    mk("text", { x:L + 4, y:Y(goal) - 4, style:"fill:var(--label); font-weight:700" }, `目標 ${goal.toFixed(1)}`);
   }
-  // 折れ線
+  // 順調なときの目安（点線）
+  if (planPts.length > 1) mk("polyline", { points:planPts.map(p => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" "), fill:"none", stroke:"var(--muted)", "stroke-width":1.5, "stroke-dasharray":"1.5 3", "stroke-linecap":"round" });
+  if (!pts.length) return;
+  // 体重の折れ線
   mk("polyline", { points:pts.map(p => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" "), fill:"none", stroke:"var(--accent)", "stroke-width":2.5, "stroke-linejoin":"round", "stroke-linecap":"round" });
   const r = pts.length > 40 ? 0 : 3;
   for (const p of pts) if (r) mk("circle", { cx:X(p[0]), cy:Y(p[1]), r, fill:"var(--accent)" });
@@ -585,7 +661,7 @@ function drawChart(goal){
 }
 $("wRanges").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  wRange = Number(b.dataset.d); try { localStorage.setItem("foodlog.wRange", String(wRange)); } catch {}
+  wMode = b.dataset.m; try { localStorage.setItem("foodlog.wMode", wMode); } catch {}
   render();
 });
 
