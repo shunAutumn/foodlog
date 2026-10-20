@@ -1976,95 +1976,82 @@ function kakutei(kcal, target){
   fx.onclick = close;
 }
 
-// 効果音：Web Audio で作る（音声ファイルなし）。iPhoneではマナーモード（消音スイッチ）中は鳴らない
-let actx = null;
-function fxSound(n, step){
-  try {
-    if (navigator.audioSession) navigator.audioSession.type = "ambient"; // 消音スイッチに従う
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === "suspended") actx.resume();
-  } catch { return; }
-  buildPachinko(actx, actx.destination, actx.currentTime + 0.05, n, step);
+// 効果音：合成音（キュイン！）＋効果音ラボの音源（sfx/）。iPhoneではマナーモード（消音スイッチ）中は鳴らない
+const SFX = ["machdash1", "drum-japanese1", "metal-logo1", "air-horn1", "trumpet1", "mens-yeah1", "shine4"];
+let actx = null, sfxBufs = null, sfxLoading = null;
+function audioCtx(){
+  if (navigator.audioSession) navigator.audioSession.type = "ambient"; // 消音スイッチに従う
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  return actx;
 }
-// パチンコの確定演出ふう：キュインキュイン → 1文字ごとにドンッ＋ジャキーン（裏でフィーバー音） → ギュイーン → パパパパーン
-function buildPachinko(ctx, dest, t0, n, step){
-  // 最後にまとめて潰して、大きく聞こえるけど割れないようにする
+// 音源を先に読み込んでおく（2回目以降はService Workerのキャッシュから）
+function loadSfx(ctx = audioCtx()){
+  return sfxLoading || (sfxLoading = Promise.all(SFX.map(async n => {
+    try { return [n, await ctx.decodeAudioData(await (await fetch(`sfx/${n}.mp3`)).arrayBuffer())]; } catch { return [n, null]; }
+  })).then(list => (sfxBufs = Object.fromEntries(list))));
+}
+function fxSound(n, step){
+  let ctx;
+  try { ctx = audioCtx(); if (ctx.state === "suspended") ctx.resume(); } catch { return; }
+  buildPachinko(ctx, ctx.destination, ctx.currentTime + 0.05, n, step, loadSfx(ctx));
+}
+// パチンコの確定演出ふう：キュイン！ → ギューン → 1文字ごとにドン → ガキーン → キュインキュインキュイン＋プァーッ＋ファンファーレ＋イエーイ＋しゃらーん
+function buildPachinko(ctx, dest, t0, n, step, samples){
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -18; comp.knee.value = 6; comp.ratio.value = 12; comp.attack.value = 0.002; comp.release.value = 0.15;
-  const master = ctx.createGain(); master.gain.value = 0.9;
+  comp.threshold.value = -16; comp.knee.value = 6; comp.ratio.value = 10; comp.attack.value = 0.003; comp.release.value = 0.2;
+  const master = ctx.createGain(); master.gain.value = 0.85;
   master.connect(comp); comp.connect(dest);
-  // ギラつかせる歪み
-  const drive = ctx.createWaveShaper(), curve = new Float32Array(1024);
-  for (let i = 0; i < curve.length; i++){ const x = i / 512 - 1; curve[i] = Math.tanh(x * 4); }
-  drive.curve = curve; drive.connect(master);
-  // ホワイトノイズ（使い回す）
-  const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), nd = noise.getChannelData(0);
+  // ホールの残響：ノイズを指数で減衰させたインパルス応答
+  const rate = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(rate * 2.4), rate);
+  for (let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
+  const verb = ctx.createConvolver(); verb.buffer = ir;
+  const wet = ctx.createGain(); wet.gain.value = 0.5; verb.connect(wet); wet.connect(master);
+  const bus = ctx.createGain(); bus.connect(master); bus.connect(verb); // 合成音はここへ（原音＋残響）
+  const noise = ctx.createBuffer(1, rate, rate), nd = noise.getChannelData(0);
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
 
-  const env = (g, at, vol, a, d) => { g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + a); g.gain.exponentialRampToValueAtTime(0.0001, at + a + d); };
-  const osc = (type, f0, f1, at, dur, vol, out = master, detune = 0) => {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type; o.detune.value = detune;
-    o.frequency.setValueAtTime(f0, at); if (f1) o.frequency.exponentialRampToValueAtTime(f1, at + dur);
-    env(g, at, vol, 0.005, dur); o.connect(g); g.connect(out); o.start(at); o.stop(at + dur + 0.1);
-    return o;
+  // キュイン！：FMで金属っぽくした高音を、一瞬で駆け上げてビブラートで伸ばす
+  const kyuin = (at, vol = 0.5, base = 1000) => {
+    const car = ctx.createOscillator(), mod = ctx.createOscillator(), modG = ctx.createGain(), g = ctx.createGain();
+    const vib = ctx.createOscillator(), vibG = ctx.createGain();
+    car.type = "square"; mod.type = "sine";
+    car.frequency.setValueAtTime(base, at); car.frequency.exponentialRampToValueAtTime(base * 3.6, at + 0.09);
+    mod.frequency.setValueAtTime(base * 1.5, at); mod.frequency.exponentialRampToValueAtTime(base * 5.4, at + 0.09);
+    modG.gain.setValueAtTime(base * 2, at); modG.gain.exponentialRampToValueAtTime(base * 0.4, at + 0.4);
+    vib.frequency.value = 22; vibG.gain.value = base * 0.12;
+    mod.connect(modG); modG.connect(car.frequency); vib.connect(vibG); vibG.connect(car.frequency);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.012);
+    g.gain.setValueAtTime(vol, at + 0.16); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.55);
+    car.connect(g); g.connect(bus);
+    for (const o of [car, mod, vib]){ o.start(at); o.stop(at + 0.6); }
   };
-  const hiss = (at, dur, vol, type, freq, q, out = master) => {
+  const hiss = (at, dur, vol, type, freq) => {
     const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    s.buffer = noise; s.loop = true; f.type = type; f.frequency.value = freq; f.Q.value = q;
-    env(g, at, vol, 0.003, dur); s.connect(f); f.connect(g); g.connect(out); s.start(at); s.stop(at + dur + 0.1);
+    s.buffer = noise; s.loop = true; f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    s.connect(f); f.connect(g); g.connect(bus); s.start(at); s.stop(at + dur + 0.1);
   };
   const reveal = t0 + 0.55, end = reveal + n * step;
 
-  // 1) キュインキュイン：上がる音を細かく何度も（ビブラートつき・3本重ね）
-  for (let k = 0; k < 4; k++){
-    const at = t0 - 0.05 + k * 0.14;
-    for (const d of [-14, 0, 14]) osc("sawtooth", 500 + k * 180, 2400 + k * 500, at, 0.13, 0.22, drive, d);
-  }
-  osc("square", 1200, 4200, t0 + 0.5, 0.1, 0.12, drive);
+  kyuin(t0, 0.55);                                       // 暗転と同時にキュイン！
+  for (let i = 0; i < n; i++) kyuin(reveal + i * step + 0.02, 0.12, 1400 * Math.pow(2, i / 12)); // 文字ごとに小さくキュッ（半音ずつ上がる）
+  [0, 0.16, 0.32].forEach((d, i) => kyuin(end + d, 0.5, 1000 * Math.pow(2, i * 2 / 12))); // 確定でキュインキュインキュイン
+  hiss(end, 1.6, 0.45, "highpass", 5000);                // シャーン
 
-  // 2) 1文字ごと：ドンッ（低いキック＋ノイズ）とジャキーン（金属っぽい高音）、半音ずつ上がる
-  for (let i = 0; i < n; i++){
-    const at = reveal + i * step, up = Math.pow(2, i / 12);
-    osc("sine", 180, 38, at, 0.32, 1.0);                          // ドン
-    hiss(at, 0.06, 0.6, "lowpass", 900, 0.7);                       // ドンのアタック
-    hiss(at, 0.28, 0.35, "bandpass", 5200 * up, 9);                 // ジャキーン（ノイズ）
-    for (const m of [1, 2.76, 5.4]) osc("square", 880 * up * m, 0, at, 0.3 / m, 0.16 / m, drive); // 金属の倍音
-  }
-
-  // 3) フィーバー音：文字が出ている間、8bitの速いアルペジオ
-  const arp = [523, 659, 784, 1047, 784, 659];
-  for (let t = reveal, i = 0; t < end; t += 0.06, i++){
-    const lift = Math.pow(2, Math.floor((t - reveal) / step) / 12);
-    osc("square", arp[i % arp.length] * 2 * lift, 0, t, 0.05, 0.07);
-  }
-
-  // 4) ギュイーン：一気に駆け上がるグリッサンド（重ねてうねらせる）
-  for (const d of [-25, 0, 25]) osc("sawtooth", 160, 3200, end - 0.45, 0.45, 0.25, drive, d);
-  hiss(end - 0.45, 0.45, 0.25, "highpass", 3000, 0.5);
-
-  // 5) 確定！：閃光と同時にクラッシュシンバル＋パパパパーン（歪ませた金管ふう）
-  hiss(end, 1.8, 0.7, "highpass", 4500, 0.4);                       // シャーン
-  osc("sine", 120, 30, end, 0.6, 1.0);                               // ドーン
-  const brass = (f, at, dur, vol) => {
-    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 6;
-    lp.frequency.setValueAtTime(600, at); lp.frequency.exponentialRampToValueAtTime(5000, at + 0.06); lp.frequency.exponentialRampToValueAtTime(1800, at + dur);
-    lp.connect(drive);
-    for (const d of [-10, 0, 10]) osc("sawtooth", f, 0, at, dur, vol, lp, d);
-  };
-  [[523, 0], [523, 0.12], [523, 0.24], [698, 0.4]].forEach(([f, dt]) => brass(f, end + dt, dt < 0.3 ? 0.1 : 0.2, 0.18)); // パ・パ・パ・パー
-  const chord = [523, 659, 784, 1047, 1319];
-  const big = end + 0.66;
-  // 伸ばす和音：トレモロ（ワウワウ）で揺らす
-  const trem = ctx.createGain(), lfo = ctx.createOscillator(), lfoG = ctx.createGain();
-  lfo.frequency.value = 9; lfoG.gain.value = 0.45; trem.gain.value = 0.55;
-  lfo.connect(lfoG); lfoG.connect(trem.gain); trem.connect(drive); lfo.start(big); lfo.stop(big + 2.6);
-  chord.forEach(f => { brass(f, big, 2.2, 0.12); osc("triangle", f * 2, 0, big, 2.4, 0.1, trem); });
-  // キンキンキン：高い鈴を連打
-  for (let i = 0; i < 12; i++) osc("sine", [2093, 2637, 3136][i % 3], 0, big + i * 0.09, 0.4, 0.12);
-  hiss(big, 2.4, 0.18, "highpass", 7000, 0.3);                       // シャラシャラ
+  // 効果音ラボの音源：読み込めた分だけ、まだ間に合うタイミングのものを鳴らす
+  const plays = [["machdash1", t0 + 0.12, 0.8], ["metal-logo1", reveal + (n - 1) * step, 0.9], ["air-horn1", end, 0.8],
+    ["trumpet1", end + 0.45, 0.9], ["mens-yeah1", end + 0.55, 0.9], ["shine4", end + 1.2, 0.7]];
+  for (let i = 0; i < n; i++) plays.push(["drum-japanese1", reveal + i * step, 1.0]);
+  Promise.resolve(samples).then(bufs => {
+    if (!bufs) return;
+    for (const [name, at, vol] of plays){
+      const b = bufs[name]; if (!b || at < ctx.currentTime) continue;
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = b; g.gain.value = vol; s.connect(g); g.connect(master); s.start(at);
+    }
+  });
 }
-$("sDopa").addEventListener("change", () => { settings.dopamine = $("sDopa").checked; saveSettings(); });
+$("sDopa").addEventListener("change", () => { settings.dopamine = $("sDopa").checked; saveSettings(); if (settings.dopamine) try { loadSfx(); } catch {} });
 $("sDopaTry").addEventListener("click", () => { const pl = plan(); hide(); kakutei(pl ? Math.round(pl.target * 0.9) : 1500, pl ? pl.target : 1700); });
 
 /* ---------- 体重の記録 ---------- */
@@ -2320,6 +2307,7 @@ async function sendOldPhotos(){
   try { localStorage.setItem(FLAG, "1"); } catch {}
 }
 setTab(tab);
+if (settings.dopamine) try { loadSfx(); } catch {}
 load().then(sendOldPhotos).then(flush);
 setInterval(() => { if (!openSheetEl) render(); }, 5 * 60e3);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

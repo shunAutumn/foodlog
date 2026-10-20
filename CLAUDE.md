@@ -9,6 +9,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - `manifest.webmanifest`, `icon-*.png` — PWA設定とアイコン
 - `Code.gs` — Googleスプレッドシート側のApps Script（ウェブアプリとしてデプロイ）
 - `README.md` — 利用者向けのセットアップ手順
+- `sfx/` — 健康確定の演出で使う効果音（効果音ラボ）
 
 ## しくみ
 - **写真の読み取り**：ブラウザから `https://api.anthropic.com/v1/messages` を直接呼ぶ
@@ -60,8 +61,10 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   （`{日付: {kcal, target, ok, at}}`）。確定後に記録が変わると再確定を促す。
 - **ドーパミン演出**：`settings.dopamine`（設定のトグル、「演出を試す」で確認）。ONで目安以内に確定すると `kakutei()` が
   虹色の『健康確定！！！』を1文字ずつ出す（集中線・虹の放射・星・閃光2回・揺れ）。閃光は2回までにしている（点滅しすぎない）。
-  効果音は `fxSound()` → `buildPachinko()` で Web Audio 合成（音声ファイルなし）：キュインキュイン → 1文字ごとにドンッ＋ジャキーン（裏で8bitアルペジオ）
-  → ギュイーン → クラッシュ＋歪ませた金管のパパパパーン → トレモロの和音と鈴。最後にコンプレッサーで潰して割れないようにしている。`navigator.audioSession.type = "ambient"` で iPhone の消音スイッチに従う。
+  効果音は `fxSound()` → `buildPachinko()`：合成の「キュイン！」（FMで駆け上がる高音＋ホール残響）に、`sfx/` の効果音ラボ音源を重ねる
+  （ギューン→文字ごとに和太鼓ドン→ガキーン→キュインキュインキュイン＋エアーホーン＋ファンファーレ＋男衆イエーイ＋しゃらーん）。
+  音源は `loadSfx()` で先読み（演出ONで起動時・ONにしたとき）、`sw.js` でキャッシュ。`navigator.audioSession.type = "ambient"` で iPhone の消音スイッチに従う。
+  `sfx/` は効果音ラボ（https://soundeffect-lab.info/）の素材：アプリへの組み込みはOK、素材の再配布・直リンクは禁止。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。
