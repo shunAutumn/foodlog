@@ -45,6 +45,12 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   `weight_upsert`（kg が null なら削除）/ `weight_list`。送信は記録と同じ `foodlog.queue`（id は `w:日付`）。
 - **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から
   ミフリン・セントジョー式で基礎代謝 → ×活動係数で TDEE → 目標に向けて ペース×7200/7 kcal を増減。基礎代謝は下回らない。
+- **タブ**：ヘッダーの「食事／筋トレ」（`setTab()`、localStorage `foodlog.tab`）。下のボタンもタブに合わせて切り替える。
+- **筋トレ**：IndexedDB `workouts` ストア（DBバージョン4）。1件 = `{id, at(ms), items:[{name, sets:[{kg, reps}]}], memo, savedAt}`
+  （kg が null なら自重）。種目名の候補は過去の種目＋ `EXERCISES`。種目を選ぶと前回のセットを入れ、「＋ セット」は直前のセットを複製。
+  今週（月曜はじまり）の回数・セット数・総重量（kg×回）、種目ごとの最大重量のグラフと自己ベスト（推定1RMはEpley式、12回以下）。
+  スプレッドシートは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量 F回数 G記録ID H メモ）。
+  `gym_upsert`（その記録IDの行を消して入れ直す）/ `gym_delete` / `gym_list`。キューの id は `g:記録ID`、記録IDは `gid` で送る。
 - **引っ越し**（設定画面）：iOSではSafariとホーム画面のアプリで保存場所が別なので、
   `foodlog-move:` + JSON `{v:1, settings, meals, queue}` をクリップボード経由で移す。
   記録はidごとに `savedAt` が新しいほうを残す。取り込み後はクリップボードを空にする（APIキーを残さない）。

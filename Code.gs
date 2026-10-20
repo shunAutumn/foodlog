@@ -89,6 +89,26 @@ function findWeightRow_(ws, date) {
   return 0;
 }
 
+// 筋トレは「筋トレ」シートに1セット1行（A日付 B時刻 C種目 Dセット E重量kg F回数 G記録ID H メモ）
+function gymSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let gs = ss.getSheetByName('筋トレ');
+  if (!gs) {
+    gs = ss.insertSheet('筋トレ', ss.getSheets().length);
+    gs.getRange(1, 1, 1, 8).setValues([['日付', '時刻', '種目', 'セット', '重量(kg)', '回数', '記録ID', 'メモ']]);
+    gs.getRange('G:G').setNumberFormat('@');
+  }
+  return gs;
+}
+
+// 記録IDの行をまとめて消す（下から）
+function deleteGymRows_(gs, id) {
+  const last = gs.getLastRow();
+  if (last < 2) return;
+  const ids = gs.getRange(2, 7, last - 1, 1).getDisplayValues();
+  for (let i = ids.length - 1; i >= 0; i--) if (ids[i][0] === String(id)) gs.deleteRow(i + 2);
+}
+
 // A列で最後に値が入っている行の次
 function nextRow_(sh) {
   const last = sh.getLastRow();
@@ -138,6 +158,26 @@ function doPost(e) {
       const ws = weightSheet_();
       const last = ws.getLastRow();
       return out_({ ok: true, rows: last < 2 ? [] : ws.getRange(2, 1, last - 1, 2).getDisplayValues() });
+    }
+
+    if (req.action === 'gym_upsert' || req.action === 'gym_delete') {
+      const gid = String(req.gid || '');
+      if (!/^[0-9a-z]+$/i.test(gid)) return out_({ ok: false, error: 'bad id' });
+      const gs = gymSheet_();
+      deleteGymRows_(gs, gid);
+      const rows = req.action === 'gym_upsert' && Array.isArray(req.rows) ? req.rows : [];
+      if (rows.length) {
+        const start = gs.getLastRow() + 1;
+        gs.getRange(start, 7, rows.length, 1).setNumberFormat('@');
+        gs.getRange(start, 1, rows.length, 8).setValues(rows.map(r => r.slice(0, 8)));
+      }
+      return out_({ ok: true });
+    }
+
+    if (req.action === 'gym_list') {
+      const gs = gymSheet_();
+      const last = gs.getLastRow();
+      return out_({ ok: true, rows: last < 2 ? [] : gs.getRange(2, 1, last - 1, 8).getDisplayValues() });
     }
 
     const r = findRow_(sh, req.id);

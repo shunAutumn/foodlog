@@ -47,6 +47,34 @@ button{font:inherit; color:inherit}
   display:flex; align-items:center; justify-content:space-between}
 .top .date{font-size:.8rem; color:var(--muted); font-weight:600}
 .top h1{margin:0; font-size:1.9rem; font-weight:800; letter-spacing:-.02em}
+.top{flex-wrap:wrap}
+.seg{flex-basis:100%; display:flex; background:var(--surface2); border-radius:12px; padding:3px; margin-top:10px}
+.seg button{flex:1; border:0; background:none; color:var(--muted); font-weight:700; font-size:.9rem; padding:7px 0; border-radius:9px; cursor:pointer}
+.seg button[aria-selected=true]{background:var(--surface); color:var(--ink); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.gymadd{grid-column:2; pointer-events:auto; border:0; border-radius:999px; background:var(--accent); color:var(--accent-ink); font-weight:800; font-size:1rem;
+  padding:16px 26px; box-shadow:0 0 0 6px var(--bg), var(--shadow); cursor:pointer; white-space:nowrap}
+.exchips{display:flex; gap:6px; overflow-x:auto; margin:10px -4px 0; padding:0 4px 2px; scrollbar-width:none}
+.exchips::-webkit-scrollbar{display:none}
+.exchips button{flex:none; border:0; background:var(--surface2); color:var(--muted); font-weight:700; font-size:.8rem; border-radius:999px; padding:6px 12px; cursor:pointer}
+.exchips button[aria-pressed=true]{background:var(--ink); color:var(--bg)}
+#gChart{display:block; width:100%; height:auto; margin-top:8px}
+#gChart text{font-size:9px; fill:var(--muted); font-family:inherit}
+.session{display:block; width:100%; text-align:left; border:0; background:var(--surface); border-radius:18px; padding:14px 16px; margin-top:10px; cursor:pointer; box-shadow:var(--shadow)}
+.session .sh{display:flex; justify-content:space-between; font-weight:800; font-size:.95rem}
+.session .sh span:last-child{color:var(--muted); font-weight:700; font-size:.85rem}
+.session .ex{font-size:.88rem; margin-top:6px; line-height:1.6; color:var(--ink)}
+.session .ex small{color:var(--muted); margin-left:6px}
+.session .memo2{color:var(--muted); font-size:.8rem; margin-top:4px}
+.exbox{background:var(--surface); border-radius:18px; padding:12px 14px; margin-bottom:10px}
+.exbox .line input[type=text]{flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:1.05rem; font-weight:700; color:var(--ink); outline:none; padding:4px 0}
+.exbox .prevrec{font-size:.78rem; color:var(--muted); margin:2px 0 6px}
+.setrow{display:flex; align-items:center; gap:6px; padding:5px 0; border-top:1px solid var(--line)}
+.setrow .no{width:22px; color:var(--muted); font-weight:800; font-size:.85rem}
+.setrow input{width:72px; border:0; border-radius:10px; background:var(--surface2); color:var(--ink); font:inherit; font-size:1rem; font-weight:700; text-align:right; padding:7px 8px; outline:none}
+.setrow input:focus{box-shadow:0 0 0 2px var(--accent)}
+.setrow .u{color:var(--muted); font-size:.85rem}
+.setrow .x, .exbox .x{margin-left:auto; border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
+.addset{border:0; background:none; color:var(--accent); font-weight:700; font-size:.9rem; padding:8px 0 2px; cursor:pointer}
 .round{width:40px; height:40px; border-radius:50%; border:0; background:var(--surface2); display:grid; place-items:center; cursor:pointer}
 .round svg{width:20px; height:20px}
 
@@ -201,14 +229,19 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
 <header class="top">
   <div>
     <div class="date" id="today"></div>
-    <h1>たべたもの</h1>
+    <h1 id="appTitle">たべたもの</h1>
   </div>
   <button class="round" id="openSettings" type="button" aria-label="設定">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
   </button>
+  <nav class="seg" id="tabs" role="tablist" aria-label="切り替え">
+    <button type="button" role="tab" data-tab="meal">食事</button><button type="button" role="tab" data-tab="gym">筋トレ</button>
+  </nav>
 </header>
 
 <main>
+ <p class="syncline" id="syncline" role="status" aria-live="polite"></p>
+ <div id="tabMeal">
   <section class="hero" aria-label="きょうの合計">
     <div><span class="big num" id="todayKcal">0</span><span class="unit" id="todayUnit">kcal</span></div>
     <div class="meter" id="meter" hidden><i id="meterFill"></i></div>
@@ -234,10 +267,28 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <span>APIキーを入れると、写真から料理とカロリーを読み取れます。</span>
     <button type="button" id="setupBtn">設定する</button>
   </div>
-  <p class="syncline" id="syncline" role="status" aria-live="polite"></p>
 
   <div id="list"></div>
   <p class="empty" id="empty">下の緑のボタンで食べたものを撮るか、<br>「手入力」で入れると、<br>ここに並んでいきます。</p>
+ </div>
+
+ <div id="tabGym" hidden>
+  <section class="hero" aria-label="今週のトレーニング">
+    <div><span class="big num" id="gWeekCount">0</span><span class="unit">回（今週）</span></div>
+    <div class="sub num" id="gWeekSub">今週はまだ記録がありません</div>
+    <div class="week" id="gWeek" aria-label="直近7日間のセット数"></div>
+  </section>
+
+  <section class="card" aria-labelledby="gpTitle">
+    <div class="cardhead"><h2 id="gpTitle">種目の伸び</h2></div>
+    <div class="exchips" id="gExList"></div>
+    <svg id="gChart" viewBox="0 0 320 150" role="img" aria-label="最大重量の推移"></svg>
+    <div class="plan" id="gBest"></div>
+  </section>
+
+  <div id="gList"></div>
+  <p class="empty" id="gEmpty">下の「＋ トレーニングを記録」で入れると、<br>ここに並んでいきます。</p>
+ </div>
 </main>
 
 <div class="dock">
@@ -249,6 +300,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
   </button>
   <input type="file" id="file" accept="image/*" class="sr" tabindex="-1" aria-hidden="true">
+  <button class="gymadd" id="gAdd" type="button" hidden>＋ トレーニングを記録</button>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -276,6 +328,25 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <button class="btn primary" id="mSave" type="button">記録する</button>
     <button class="btn plain" id="mCancel" type="button">キャンセル</button>
     <button class="btn danger" id="mDelete" type="button" hidden>この記録を削除</button>
+  </div>
+</div>
+
+<!-- workout sheet -->
+<div class="sheet" id="gSheet" role="dialog" aria-modal="true" aria-labelledby="gsTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="gsTitle">トレーニング</h3>
+    <div class="group"><div class="row"><label for="gTime">日時</label><input type="datetime-local" id="gTime" style="text-align:right"></div></div>
+    <div class="cap">種目</div>
+    <div id="gItems"></div>
+    <button class="btn plain" id="gAddEx" type="button">＋ 種目を追加</button>
+    <div class="cap">メモ</div>
+    <div class="group"><div class="row"><input type="text" id="gMemo" placeholder="調子・部位など（なくてもOK）" aria-label="メモ"></div></div>
+    <div class="totalrow"><span style="font-weight:700">合計</span><span class="num" id="gTotal" style="font-weight:800"></span></div>
+    <div class="status" id="gStatus"></div>
+    <button class="btn primary" id="gSave" type="button">記録する</button>
+    <button class="btn plain" id="gCancel" type="button">キャンセル</button>
+    <button class="btn danger" id="gDel" type="button" hidden>このトレーニングを削除</button>
   </div>
 </div>
 
@@ -386,7 +457,7 @@ const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(set
 const DB = (() => {
   let p;
   const open = () => p || (p = new Promise((res, rej) => {
-    const r = indexedDB.open("foodlog", 3);
+    const r = indexedDB.open("foodlog", 4);
     r.onupgradeneeded = () => {
       const db = r.result;
       if (!db.objectStoreNames.contains("meals")) db.createObjectStore("meals", { keyPath:"id" });
@@ -394,6 +465,8 @@ const DB = (() => {
       if (!db.objectStoreNames.contains("photos")) db.createObjectStore("photos", { keyPath:"id" });
       // 体重 {date:"yyyy-MM-dd", kg, savedAt}
       if (!db.objectStoreNames.contains("weights")) db.createObjectStore("weights", { keyPath:"date" });
+      // 筋トレ {id, at(ms), items:[{name, sets:[{kg, reps}]}], memo, savedAt}
+      if (!db.objectStoreNames.contains("workouts")) db.createObjectStore("workouts", { keyPath:"id" });
     };
     r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
     r.onerror = () => rej(r.error);
@@ -410,16 +483,20 @@ const DB = (() => {
     delPhoto: id => tx("photos", "readwrite", s => s.delete(id)),
     allW: () => tx("weights", "readonly", s => s.getAll()),
     putW: w => tx("weights", "readwrite", s => s.put(w)),
-    delW: date => tx("weights", "readwrite", s => s.delete(date))
+    delW: date => tx("weights", "readwrite", s => s.delete(date)),
+    allG: () => tx("workouts", "readonly", s => s.getAll()),
+    putG: g => tx("workouts", "readwrite", s => s.put(g)),
+    delG: id => tx("workouts", "readwrite", s => s.delete(id))
   };
 })();
 
 let meals = [];
-let weights = [];
+let weights = [], workouts = [];
 const sortW = () => weights.sort((a, b) => a.date < b.date ? -1 : 1);
 async function load(){
   try { meals = (await DB.all()) || []; } catch { meals = []; }
   try { weights = (await DB.allW()) || []; sortW(); } catch { weights = []; }
+  try { workouts = (await DB.allG()) || []; } catch { workouts = []; }
   render();
 }
 
@@ -517,6 +594,7 @@ function render(){
     sec.append(h, g); list.append(sec);
   }
   $("setupNotice").hidden = !!settings.key;
+  renderGym();
 }
 
 /* ---------- 体重カード ---------- */
@@ -814,7 +892,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) flus
 const scrim = $("scrim");
 let openSheetEl = null;
 function show(el){ openSheetEl = el; el.classList.add("open"); scrim.classList.add("open"); }
-function hide(){ if (openSheetEl) openSheetEl.classList.remove("open"); scrim.classList.remove("open"); openSheetEl = null; if (ctl) { ctl.abort(); ctl = null; } draft = null; }
+function hide(){ if (openSheetEl) openSheetEl.classList.remove("open"); scrim.classList.remove("open"); openSheetEl = null; if (ctl) { ctl.abort(); ctl = null; } draft = null; gdraft = null; }
 scrim.addEventListener("click", hide);
 document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
 
@@ -1189,6 +1267,291 @@ $("mDelete").addEventListener("click", async () => {
   enqueue({ action:"delete", id });
 });
 
+/* ---------- タブ（食事／筋トレ） ---------- */
+let tab = "meal";
+try { tab = localStorage.getItem("foodlog.tab") === "gym" ? "gym" : "meal"; } catch {}
+function setTab(t){
+  tab = t; try { localStorage.setItem("foodlog.tab", t); } catch {}
+  $("tabMeal").hidden = t !== "meal"; $("tabGym").hidden = t !== "gym";
+  for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.tab === t));
+  $("appTitle").textContent = t === "gym" ? "筋トレ" : "たべたもの";
+  $("manual").hidden = $("shutter").hidden = t !== "meal"; $("gAdd").hidden = t !== "gym";
+  window.scrollTo(0, 0);
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
+
+/* ---------- 筋トレ ---------- */
+// 種目名|よみ（候補用）
+const EXERCISES = `ベンチプレス|
+インクラインベンチプレス|
+ダンベルプレス|
+ダンベルフライ|
+チェストプレス|
+ケーブルクロスオーバー|
+腕立て伏せ|うでたてふせ ぷっしゅあっぷ
+ディップス|
+スクワット|
+フロントスクワット|
+ブルガリアンスクワット|
+レッグプレス|
+レッグエクステンション|
+レッグカール|
+ランジ|
+ヒップスラスト|
+カーフレイズ|
+デッドリフト|
+ルーマニアンデッドリフト|
+懸垂|けんすい ちんにんぐ
+ラットプルダウン|
+ベントオーバーロウ|
+ワンハンドロウ|
+シーテッドロウ|
+ショルダープレス|
+サイドレイズ|
+リアレイズ|
+フェイスプル|
+アップライトロウ|
+シュラッグ|
+アームカール|
+ハンマーカール|
+トライセプスエクステンション|
+プレスダウン|
+腹筋（クランチ）|ふっきん くらんち
+レッグレイズ|
+アブローラー|`.split("\n").map(l => { const [name, yomi] = l.split("|"); return { name, key:norm(name) + "|" + norm(yomi) }; });
+
+const vol = g => g.items.reduce((s, it) => s + it.sets.reduce((t, x) => t + (x.kg > 0 && x.reps > 0 ? x.kg * x.reps : 0), 0), 0);
+const setCount = g => g.items.reduce((s, it) => s + it.sets.filter(x => x.reps > 0 || x.kg > 0).length, 0);
+const sortedG = () => [...workouts].sort((a, b) => b.at - a.at);
+// 「60kg×10・8 / 65kg×6」の形に（同じ重さが続くセットはまとめる）
+function fmtSets(sets){
+  const out = [];
+  for (const x of sets.filter(x => x.reps > 0 || x.kg > 0)){
+    const kg = x.kg > 0 ? `${x.kg}kg` : "自重", reps = x.reps > 0 ? String(x.reps) : "—";
+    const lastG = out[out.length - 1];
+    if (lastG && lastG.kg === kg) lastG.reps.push(reps); else out.push({ kg, reps:[reps] });
+  }
+  return out.map(g => `${g.kg}×${g.reps.join("・")}`).join(" / ");
+}
+// 同じ種目のいちばん新しい記録（今編集しているもの以外）
+function prevOf(name, exceptId, before){
+  const k = norm(name); if (!k) return null;
+  for (const g of sortedG()){
+    if (g.id === exceptId || (before && g.at >= before)) continue;
+    const it = g.items.find(i => norm(i.name) === k);
+    if (it && it.sets.some(x => x.reps > 0 || x.kg > 0)) return { at:g.at, sets:it.sets };
+  }
+  return null;
+}
+function suggestEx(q){
+  q = norm(q); if (!q) return [];
+  const seen = new Set(), used = [];
+  for (const g of sortedG()) for (const it of g.items){ const k = norm(it.name); if (k && !seen.has(k)){ seen.add(k); const d = EXERCISES.find(e => norm(e.name) === k); used.push({ name:it.name, key:d ? d.key : k, src:"前回" }); } }
+  const rank = (e, base) => e.key.split(/[| ]/).some(k => k && k.startsWith(q)) ? base : e.key.includes(q) ? base + 1 : -1;
+  return [...used.map(e => [e, rank(e, 0)]), ...EXERCISES.filter(e => !seen.has(norm(e.name))).map(e => [e, rank(e, 2)])]
+    .filter(([, r]) => r >= 0).sort((a, b) => a[1] - b[1]).slice(0, 6).map(([e]) => e);
+}
+
+let gdraft = null;
+const blankSet = () => ({ kg:null, reps:null });
+function openGym(g, isNew){
+  gdraft = structuredClone(g); gdraft._new = isNew;
+  $("gTime").value = localInput(gdraft.at);
+  $("gMemo").value = gdraft.memo || "";
+  $("gDel").hidden = isNew; $("gSave").textContent = isNew ? "記録する" : "保存する"; $("gSave").disabled = false;
+  setStatus($("gStatus"), "");
+  renderGItems(); show($("gSheet"));
+}
+function gTotal(){
+  const s = setCount(gdraft), v = vol(gdraft);
+  $("gTotal").textContent = `${s}セット${v ? `・${fmt(Math.round(v))}kg` : ""}`;
+}
+function renderGItems(){
+  const box = $("gItems"); box.textContent = "";
+  gdraft.items.forEach((it, idx) => {
+    const b = el("div", "exbox");
+    const l1 = el("div", "line"), sg = el("div", "sugg"); sg.hidden = true;
+    const n = el("input"); n.type = "text"; n.placeholder = "種目名（例：ベンチプレス）"; n.value = it.name; n.autocomplete = "off"; n.setAttribute("aria-label", "種目名");
+    const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "この種目を外す");
+    x.addEventListener("click", () => { gdraft.items.splice(idx, 1); renderGItems(); });
+    l1.append(n, x);
+    const pr = el("div", "prevrec");
+    const showPrev = () => { const p = prevOf(it.name, gdraft.id, gdraft._new ? null : gdraft.at); pr.textContent = p ? `前回 ${md(p.at)}：${fmtSets(p.sets)}` : ""; pr.hidden = !p; return p; };
+    showPrev();
+    const pickEx = name => {
+      it.name = name;
+      const p = prevOf(name, gdraft.id, gdraft._new ? null : gdraft.at);
+      // まだ何も入れていなければ、前回のセットをそのまま入れておく
+      if (p && it.sets.every(s => s.kg == null && s.reps == null)) it.sets = p.sets.map(s => ({ kg:s.kg, reps:s.reps }));
+      renderGItems();
+    };
+    const showSugg = () => {
+      sg.textContent = "";
+      const list = suggestEx(n.value);
+      for (const e of list){
+        const bt = el("button"); bt.type = "button";
+        bt.append(el("span", "src", e.src || "種目"), el("span", "nm2", e.name));
+        bt.addEventListener("pointerdown", ev => ev.preventDefault());
+        bt.addEventListener("click", () => pickEx(e.name));
+        sg.append(bt);
+      }
+      sg.hidden = !list.length;
+    };
+    n.addEventListener("input", () => { it.name = n.value; showSugg(); showPrev(); });
+    n.addEventListener("focus", showSugg);
+    n.addEventListener("blur", () => setTimeout(() => { sg.hidden = true; }, 200));
+    b.append(l1, sg, pr);
+
+    it.sets.forEach((st, si) => {
+      const r = el("div", "setrow");
+      const num = (val, label, dec) => { const i = el("input"); i.type = "number"; i.inputMode = dec ? "decimal" : "numeric"; i.min = "0"; i.step = dec ? "0.5" : "1"; i.placeholder = dec ? "自重" : "0"; i.value = val ?? ""; i.setAttribute("aria-label", label); return i; };
+      const kg = num(st.kg, `${si + 1}セット目の重量（kg）`, true), reps = num(st.reps, `${si + 1}セット目の回数`, false);
+      kg.addEventListener("input", () => { st.kg = kg.value === "" ? null : Math.max(0, Number(kg.value)); gTotal(); });
+      reps.addEventListener("input", () => { st.reps = reps.value === "" ? null : Math.max(0, Math.round(Number(reps.value))); gTotal(); });
+      const del = el("button", "x", "×"); del.type = "button"; del.setAttribute("aria-label", `${si + 1}セット目を消す`);
+      del.addEventListener("click", () => { it.sets.splice(si, 1); if (!it.sets.length) it.sets.push(blankSet()); renderGItems(); });
+      r.append(el("span", "no num", String(si + 1)), kg, el("span", "u", "kg ×"), reps, el("span", "u", "回"), del);
+      b.append(r);
+    });
+    const add = el("button", "addset", "＋ セット"); add.type = "button";
+    add.addEventListener("click", () => {
+      const last = it.sets[it.sets.length - 1];
+      it.sets.push(last ? { kg:last.kg, reps:last.reps } : blankSet()); // 直前のセットと同じ内容で増やす
+      renderGItems();
+      [...box.querySelectorAll(".exbox")][idx]?.querySelectorAll(".setrow input")?.[it.sets.length * 2 - 1]?.focus();
+    });
+    b.append(add);
+    box.append(b);
+  });
+  gTotal();
+}
+$("gAdd").addEventListener("click", () => {
+  openGym({ id:newId(), at:Date.now(), items:[{ name:"", sets:[blankSet()] }], memo:"" }, true);
+  $("gItems").querySelector("input")?.focus();
+});
+$("gAddEx").addEventListener("click", () => {
+  gdraft.items.push({ name:"", sets:[blankSet()] }); renderGItems();
+  [...$("gItems").querySelectorAll(".exbox")].pop()?.querySelector("input")?.focus();
+});
+$("gTime").addEventListener("change", () => { const t = new Date($("gTime").value).getTime(); if (!isNaN(t) && gdraft) gdraft.at = t; });
+$("gCancel").addEventListener("click", hide);
+function gymRows(g){
+  const d = new Date(g.at), rows = [];
+  const date = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`, time = `${d.getHours()}:${pad(d.getMinutes())}`;
+  for (const it of g.items) it.sets.forEach((s, i) => rows.push([date, time, safe(it.name), i + 1, s.kg ?? "", s.reps ?? "", g.id, rows.length ? "" : safe(g.memo || "")]));
+  return rows;
+}
+$("gSave").addEventListener("click", async () => {
+  if (!gdraft) return;
+  const items = gdraft.items.map(it => ({ name:(it.name || "").trim(), sets:it.sets.filter(s => s.kg > 0 || s.reps > 0).map(s => ({ kg:s.kg > 0 ? s.kg : null, reps:s.reps > 0 ? s.reps : null })) }))
+    .filter(it => it.name && it.sets.length);
+  if (!items.length) return setStatus($("gStatus"), "種目名と、重さか回数を1セット以上入れてください。", "err");
+  const g = { id:gdraft.id, at:gdraft.at, items, memo:$("gMemo").value.trim(), savedAt:Date.now() };
+  $("gSave").disabled = true;
+  try {
+    await DB.putG(g);
+    workouts = workouts.filter(x => x.id !== g.id).concat(g);
+    hide(); render();
+    enqueue({ action:"gym_upsert", id:"g:" + g.id, gid:g.id, rows:gymRows(g) });
+  } catch { setStatus($("gStatus"), "保存できませんでした。もう一度押してください。", "err"); $("gSave").disabled = false; }
+});
+$("gDel").addEventListener("click", async () => {
+  if (!gdraft || !confirm("このトレーニングを削除しますか？")) return;
+  const id = gdraft.id;
+  await DB.delG(id).catch(() => {});
+  workouts = workouts.filter(x => x.id !== id);
+  hide(); render();
+  enqueue({ action:"gym_delete", id:"g:" + id, gid:id });
+});
+
+let gEx = "";
+try { gEx = localStorage.getItem("foodlog.gEx") || ""; } catch {}
+function renderGym(){
+  const now = new Date(), gs = sortedG();
+  // 今週（月曜はじまり）
+  const mon = new Date(now); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
+  const wk = gs.filter(g => g.at >= mon.getTime());
+  $("gWeekCount").textContent = String(wk.length);
+  $("gWeekSub").textContent = wk.length ? `${wk.reduce((s, g) => s + setCount(g), 0)}セット・総重量 ${fmt(Math.round(wk.reduce((s, g) => s + vol(g), 0)))}kg` : "今週はまだ記録がありません";
+  // 直近7日のセット数
+  const days = []; for (let i = 6; i >= 0; i--){ const d = new Date(now); d.setDate(now.getDate() - i); days.push(d); }
+  const per = days.map(d => gs.filter(g => dayKey(g.at) === dayKey(d.getTime())).reduce((s, g) => s + setCount(g), 0));
+  const max = Math.max(1, ...per), box = $("gWeek"); box.textContent = "";
+  days.forEach((d, i) => {
+    const c = el("div", "col" + (i === 6 ? " today" : "")), b = el("div", "bar");
+    b.style.height = `${Math.max(6, Math.round(per[i] / max * 60))}px`;
+    if (per[i]) b.style.background = "var(--accent)";
+    c.title = `${d.getMonth()+1}/${d.getDate()} ${per[i]}セット`;
+    c.append(b, el("div", "d", i === 6 ? "今日" : WEEK[d.getDay()])); box.append(c);
+  });
+
+  // 種目の伸び
+  const names = [];
+  for (const g of gs) for (const it of g.items) if (!names.some(n => norm(n) === norm(it.name))) names.push(it.name);
+  if (!names.some(n => n === gEx)) gEx = names[0] || "";
+  const chips = $("gExList"); chips.textContent = "";
+  for (const n of names.slice(0, 12)){
+    const b = el("button", null, n); b.type = "button"; b.setAttribute("aria-pressed", String(n === gEx));
+    b.addEventListener("click", () => { gEx = n; try { localStorage.setItem("foodlog.gEx", n); } catch {} renderGym(); });
+    chips.append(b);
+  }
+  drawGymChart(gEx);
+
+  // 一覧
+  const list = $("gList"); list.textContent = "";
+  $("gEmpty").hidden = gs.length > 0;
+  for (const g of gs.slice(0, 60)){
+    const d = new Date(g.at), b = el("button", "session"); b.type = "button";
+    const sh = el("div", "sh");
+    sh.append(el("span", null, `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）${d.getHours()}:${pad(d.getMinutes())}`),
+      el("span", "num", `${setCount(g)}セット${vol(g) ? `・${fmt(Math.round(vol(g)))}kg` : ""}`));
+    b.append(sh);
+    for (const it of g.items){ const e = el("div", "ex", it.name); e.append(el("small", "num", fmtSets(it.sets))); b.append(e); }
+    if (g.memo) b.append(el("div", "memo2", g.memo));
+    b.addEventListener("click", () => openGym(g, false));
+    list.append(b);
+  }
+}
+// 1回ごとの最大重量（重さがない種目は最大回数）
+function drawGymChart(name){
+  const svg = $("gChart"), W = 320, H = 150, L = 30, R = 8, T = 12, B = 20, NS = "http://www.w3.org/2000/svg";
+  svg.textContent = "";
+  const mk = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.append(e); return e; };
+  const best = $("gBest"); best.textContent = "";
+  const k = norm(name);
+  const hits = workouts.map(g => ({ at:g.at, sets:(g.items.find(i => norm(i.name) === k) || { sets:[] }).sets })).filter(h => h.sets.length).sort((a, b) => a.at - b.at);
+  if (!hits.length){ mk("text", { x:W / 2, y:H / 2, "text-anchor":"middle" }, "記録すると、種目ごとの伸びがグラフになります"); return; }
+  const byKg = hits.some(h => h.sets.some(s => s.kg > 0));
+  const pts = hits.map(h => [h.at, Math.max(...h.sets.map(s => (byKg ? s.kg : s.reps) || 0))]).filter(p => p[1] > 0);
+  const unit = byKg ? "kg" : "回";
+  // 自己ベスト
+  if (byKg){
+    let top = null;
+    for (const h of hits) for (const s of h.sets) if (s.kg > 0 && (!top || s.kg > top.kg || (s.kg === top.kg && (s.reps || 0) > (top.reps || 0)))) top = { ...s, at:h.at };
+    const rm = Math.max(...hits.flatMap(h => h.sets.filter(s => s.kg > 0 && s.reps > 0 && s.reps <= 12).map(s => s.kg * (1 + s.reps / 30))), 0);
+    best.append("自己ベスト ", el("b", "num", `${top.kg}kg`), top.reps ? ` × ${top.reps}回` : "", el("span", "muted", `（${md(top.at)}）${rm ? `・推定1RM ${Math.round(rm)}kg` : ""}`));
+  } else {
+    const top = Math.max(...pts.map(p => p[1]));
+    best.append("最高 ", el("b", "num", `${top}回`));
+  }
+  let lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1]));
+  const pad2 = Math.max(byKg ? 2.5 : 1, (hi - lo) * 0.15); lo = Math.max(0, Math.floor(lo - pad2)); hi = Math.ceil(hi + pad2);
+  const x0 = pts[0][0], x1 = Math.max(pts[pts.length - 1][0], x0 + DAY), span = x1 - x0;
+  const X = t => pts.length === 1 ? (L + W - R) / 2 : L + (t - x0) / span * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  for (let i = 0; i <= 2; i++){
+    const v = lo + (hi - lo) * i / 2;
+    mk("line", { x1:L, x2:W - R, y1:Y(v), y2:Y(v), stroke:"var(--line)", "stroke-width":1 });
+    mk("text", { x:L - 4, y:Y(v) + 3, "text-anchor":"end" }, `${Math.round(v * 10) / 10}`);
+  }
+  mk("text", { x:L, y:H - 5 }, md(x0));
+  if (pts.length > 1) mk("text", { x:W - R, y:H - 5, "text-anchor":"end" }, md(x1));
+  mk("text", { x:W - R, y:T - 2, "text-anchor":"end" }, `最大${byKg ? "重量" : "回数"}（${unit}）`);
+  if (pts.length > 1) mk("polyline", { points:pts.map(p => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" "), fill:"none", stroke:"var(--accent)", "stroke-width":2.5, "stroke-linejoin":"round", "stroke-linecap":"round" });
+  for (const p of pts) mk("circle", { cx:X(p[0]), cy:Y(p[1]), r:pts.length > 40 ? 0 : 3, fill:"var(--accent)" });
+  const lp = pts[pts.length - 1];
+  mk("circle", { cx:X(lp[0]), cy:Y(lp[1]), r:4.5, fill:"var(--surface)", stroke:"var(--accent)", "stroke-width":2.5 });
+}
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -1302,6 +1665,24 @@ $("sImport").addEventListener("click", async () => {
       }
       sortW();
     } catch {}
+    // 筋トレ（1セット1行を、記録IDごとにまとめ直す）
+    let gAdded = 0;
+    try {
+      const gr = await callSheet({ action:"gym_list" });
+      const byId = new Map();
+      for (const [date, time, name, , kg, reps, id, memo] of gr.rows || []){
+        if (!id || workouts.some(w => w.id === id)) continue;
+        const dm = String(date).match(/(d{4})D(d{1,2})D(d{1,2})/), tm = String(time).match(/(d{1,2}):(d{2})/);
+        if (!dm) continue;
+        let g = byId.get(id);
+        if (!g){ g = { id, at:new Date(+dm[1], +dm[2] - 1, +dm[3], tm ? +tm[1] : 12, tm ? +tm[2] : 0).getTime(), items:[], memo:"", savedAt:Date.now() }; byId.set(id, g); }
+        if (memo && !g.memo) g.memo = String(memo);
+        let it = g.items.find(i => i.name === name);
+        if (!it){ it = { name:String(name), sets:[] }; g.items.push(it); }
+        it.sets.push({ kg:Number(kg) > 0 ? Number(kg) : null, reps:Number(reps) > 0 ? Number(reps) : null });
+      }
+      for (const g of byId.values()){ await DB.putG(g); workouts.push(g); gAdded++; }
+    } catch {}
     render();
     // 写真がない記録は、Googleドライブから写真を取ってくる
     const sheetIds = new Set((r.rows || []).map(row => String(row[6])));
@@ -1318,7 +1699,7 @@ $("sImport").addEventListener("click", async () => {
       } catch { failed = true; break; }
     }
     render();
-    const parts = [added ? `${added}件の記録を読み込みました` : "新しく読み込む記録はありませんでした", got ? `写真${got}枚を戻しました` : "", wAdded ? `体重${wAdded}日分を戻しました` : ""].filter(Boolean);
+    const parts = [added ? `${added}件の記録を読み込みました` : "新しく読み込む記録はありませんでした", got ? `写真${got}枚を戻しました` : "", wAdded ? `体重${wAdded}日分を戻しました` : "", gAdded ? `筋トレ${gAdded}回分を戻しました` : ""].filter(Boolean);
     setStatus($("sStatus"), parts.join("。") + "。" + (failed ? "写真の一部は読み込めませんでした。" : ""), failed ? "err" : "");
   } catch (e){ setStatus($("sStatus"), "読み込めませんでした。URLと合言葉を確認してください。", "err"); }
 });
@@ -1327,7 +1708,7 @@ $("sImport").addEventListener("click", async () => {
 const MOVE = "foodlog-move:";
 $("mvCopy").addEventListener("click", async () => {
   grab();
-  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, queue:readQ() });
+  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, workouts, queue:readQ() });
   try {
     await navigator.clipboard.writeText(text);
     setStatus($("mvStatus"), `コピーしました（記録${meals.length}件）。移した先で「貼り付けて取り込む」を押してください。`);
@@ -1361,6 +1742,12 @@ async function importMove(text){
       await DB.putW(w); weights = weights.filter(x => x.date !== w.date).concat(w);
     }
     sortW();
+    for (const g of Array.isArray(d.workouts) ? d.workouts : []){
+      if (!g || !g.id || typeof g.at !== "number" || !Array.isArray(g.items)) continue;
+      const cur = workouts.find(x => x.id === g.id);
+      if (cur && (cur.savedAt || 0) >= (g.savedAt || 0)) continue;
+      await DB.putG(g); workouts = workouts.filter(x => x.id !== g.id).concat(g);
+    }
     const have = new Map(meals.map(m => [m.id, m])); let n = 0;
     for (const m of d.meals){
       if (!m || !m.id || typeof m.eatenAt !== "number") continue;
@@ -1388,6 +1775,7 @@ async function sendOldPhotos(){
   for (const m of meals) if (m.thumb && !readPQ().some(o => o.id === m.id)) await enqueuePhoto(m, m.thumb, true).catch(() => {});
   try { localStorage.setItem(FLAG, "1"); } catch {}
 }
+setTab(tab);
 load().then(sendOldPhotos).then(flush);
 setInterval(() => { if (!openSheetEl) render(); }, 5 * 60e3);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
