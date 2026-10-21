@@ -5,6 +5,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 
 ## ファイル構成
 - `index.html` — アプリ本体（CSS・JSすべて内包）
+- `foods.js` — 料理名の候補（目安表）`window.FOODS_SRC`。1行＝名前|量|よみ|g|kcal|P|F|C|糖質（約500件、チェーン店は公表値などからの概算）
 - `sw.js` — Service Worker。アプリ本体をキャッシュ（同一オリジンのGETのみ、network-first）
 - `manifest.webmanifest`, `icon-*.png` — PWA設定とアイコン
 - `Code.gs` — Googleスプレッドシート側のApps Script（ウェブアプリとしてデプロイ）
@@ -19,11 +20,14 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **読み取る前の確認**：写真を選んでもすぐには送らない。編集画面の「Sonnetで読み取る」「Haikuで読み取る」を押したときだけ `readWith(model)` → `askClaude(写真, signal, model)` を呼ぶ。設定のモデルを上（緑）、もう一方を下に出す。あとから付けた写真も読み取れる。`max_tokens` は考える過程を含めて 4096。
 - **API使用量**：返事の `usage` を localStorage `foodlog.usage`（`{"yyyy-MM": {model: {n, in, out}}}`）に足し、設定画面に今月・先月の合計を出す。料金は `PRICES`（$/100万トークン）、1ドル＝150円で換算。
 - **食事の区分**：`cat`（朝食・昼食・夕食・間食）。新しい記録は時刻から自動（自分で選んだら固定）、以前の記録は `mealCat()` で時刻から決める。区分ごとに1食と数え、一覧も区分ごとに分ける。シートのC列の先頭に `［朝食］` を付け、読み込み時に外す。
+- **バーコード**：「＋ 記録」→「バーコードを読む」。`BarcodeDetector` があればそれ、なければ ZXing（CDN、使うときだけ読む）でJANを読む。
+  自分の記録（localStorage `foodlog.barcodes`、コード→品目）→ Open Food Facts（100gあたり、糖質＝炭水化物−食物繊維）の順に探す。
+  見つからないときは写真か手入力に `_barcode` を引き継ぎ、保存時に `rememberBarcode()` で覚える。引っ越しにも入れる。
 - **手入力**：下の「手入力」ボタン。写真なし・AIなしで同じ編集画面を開く。
-- **料理名の候補（AIなし）**：過去の記録（「前回」）と、`index.html` 内の目安表 `FOODS`（「目安」、
-  `名前|量のめやす|よみ|g|kcal`）から出す。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
+- **料理名の候補（AIなし）**：過去の記録（「前回」）と、`foods.js` の目安表（`FOODS`、「目安」、
+  `名前|量のめやす|よみ|g|kcal|P|F|C|糖質`）から出す。よみは空白区切りで複数（チェーン名・略称など）。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
   グラムを変えるとカロリーと栄養素は `_base`（その時点のg・kcal・栄養素、保存しない）から `scaleTo()` で比例して変わる。
-  栄養素は任意（品目の「栄養素」で開く）。値がないものは null で、0g とは区別する。目安表 `FOODS` には栄養素はない。
+  栄養素は任意（品目の「栄養素」で開く）。値がないものは null で、0g とは区別する。目安表の栄養素も、選ぶとグラムに合わせて入る。
 - **保存**：IndexedDB（DB名 `foodlog`、ストア `meals`、keyPath `id`）。
   1件 = `{id, eatenAt(ms), items[{name,g,kcal,p,f,c,s,source}], total, thumb(dataURL), comment, savedAt}`。
 - **設定**：localStorage `foodlog.settings`（APIキー、モデル、Apps ScriptのURL、合言葉）。

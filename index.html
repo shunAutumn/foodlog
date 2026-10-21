@@ -378,6 +378,13 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .steps li{margin-bottom:6px}
 .steps ul{padding-left:1.1em; margin:4px 0}
 .steps code{background:var(--surface); border-radius:6px; padding:1px 5px; font-size:.82rem}
+.bcview{position:relative; border-radius:18px; overflow:hidden; background:#000; aspect-ratio:4/3}
+.bcview video{width:100%; height:100%; object-fit:cover; display:block}
+.bcguide{position:absolute; left:10%; right:10%; top:32%; bottom:32%; border:3px solid rgba(255,255,255,.9); border-radius:12px; box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.bcguide::after{content:""; position:absolute; left:6%; right:6%; top:50%; height:2px; background:#ff3b3b; box-shadow:0 0 8px #ff3b3b; animation:bc-scan 1.4s ease-in-out infinite alternate}
+@keyframes bc-scan{from{transform:translateY(-30px)} to{transform:translateY(30px)}}
+#bcResult .group{margin-top:10px}
+.bcnut{margin:10px 8px 0; font-weight:800}
 .photobtn{display:block; margin:10px auto 0; border:0; background:var(--surface); color:var(--accent); font-weight:700; font-size:.9rem;
   border-radius:999px; padding:9px 18px; cursor:pointer}
 .photobtn:focus-visible{outline:3px solid var(--accent); outline-offset:3px}
@@ -420,7 +427,8 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .sugg button:last-child{border-bottom:0}
 .sugg .nm2{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .sugg .nm2 small{color:var(--muted); margin-left:4px}
-.sugg .meta{color:var(--muted); white-space:nowrap}
+.sugg .meta{color:var(--muted); white-space:nowrap; display:flex; flex-direction:column; align-items:flex-end; line-height:1.25}
+.sugg .meta small{font-size:.68rem; opacity:.85}
 .sugg .src{font-size:.65rem; font-weight:800; color:var(--accent); border:1.5px solid currentColor; border-radius:6px; padding:0 4px; flex:none}
 .totalrow{display:flex; justify-content:space-between; align-items:baseline; margin:18px 8px 0}
 .totalrow .v{font-size:2rem; font-weight:800; letter-spacing:-.03em}
@@ -578,6 +586,24 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <button class="btn primary" id="mSave" type="button">記録する</button>
     <button class="btn plain" id="mCancel" type="button">キャンセル</button>
     <button class="btn danger" id="mDelete" type="button" hidden>この記録を削除</button>
+  </div>
+</div>
+
+<!-- barcode sheet -->
+<div class="sheet" id="bcSheet" role="dialog" aria-modal="true" aria-labelledby="bcTitle">
+  <div class="sheet-in">
+    <div class="grab"></div>
+    <h3 id="bcTitle">バーコードを読む</h3>
+    <div id="bcCam">
+      <div class="bcview"><video id="bcVideo" playsinline muted autoplay></video><div class="bcguide"></div></div>
+    </div>
+    <div class="status" id="bcStatus"></div>
+    <div id="bcResult" hidden></div>
+    <div class="group" style="margin-top:12px">
+      <div class="row"><input id="bcCode" type="text" inputmode="numeric" placeholder="数字で入れる（例：4901234567894）" aria-label="バーコードの数字"><button class="chip" id="bcSearch" type="button">調べる</button></div>
+    </div>
+    <p class="help">商品の情報は Open Food Facts（みんなで登録している食品データベース）から探します。送るのはバーコードの数字だけです。</p>
+    <button class="btn plain" id="bcCancel" type="button">閉じる</button>
   </div>
 </div>
 
@@ -811,6 +837,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
   </div>
 </div>
 
+<script src="foods.js"></script>
 <script>
 (() => {
 "use strict";
@@ -1387,7 +1414,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) flus
 const scrim = $("scrim");
 let openSheetEl = null;
 function show(el){ openSheetEl = el; el.classList.add("open"); scrim.classList.add("open"); }
-function hide(){ if (openSheetEl) openSheetEl.classList.remove("open"); scrim.classList.remove("open"); openSheetEl = null; if (ctl) { ctl.abort(); ctl = null; } draft = null; gdraft = null; }
+function hide(){ if (openSheetEl) openSheetEl.classList.remove("open"); scrim.classList.remove("open"); openSheetEl = null; if (ctl) { ctl.abort(); ctl = null; } draft = null; gdraft = null; stopScan(); }
 scrim.addEventListener("click", hide);
 document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
 
@@ -1419,301 +1446,11 @@ const nutLine = items => NUTS.map(([k, label]) => [label, nsum(items, k)]).filte
 
 /* ---------- 料理名の候補（AIなし：過去の記録＋目安表） ---------- */
 // 名前|量のめやす|よみ|g|kcal（一般的な1人前の目安。文部科学省「日本食品標準成分表」などを参考にした概算）
-const FOODS = `ご飯|茶碗1杯|ごはん|150|234
-ご飯|大盛り|ごはん|250|390
-玄米ご飯|茶碗1杯|げんまいごはん|150|228
-おにぎり（鮭）|1個|おにぎりしゃけさけ|110|180
-おにぎり（梅）|1個|おにぎりうめ|110|170
-おにぎり（ツナマヨ）|1個|おにぎりつなまよ|110|230
-食パン|6枚切り1枚|しょくぱん|60|150
-バタートースト|6枚切り1枚|ばたーとーすと|65|200
-ロールパン|1個|ろーるぱん|30|93
-クロワッサン|1個||40|180
-メロンパン|1個||100|350
-カレーパン|1個||100|320
-あんパン|1個||100|270
-サンドイッチ|ミックス1パック||150|350
-ハンバーガー|1個||110|260
-チーズバーガー|1個||120|310
-フライドポテト|Mサイズ||135|410
-かけうどん|1杯||450|330
-きつねうどん|1杯||480|420
-ざるそば|1枚||300|300
-かけそば|1杯||450|330
-醤油ラーメン|1杯|しょうゆらーめん|600|500
-味噌ラーメン|1杯|みそらーめん|650|600
-豚骨ラーメン|1杯|とんこつらーめん|600|600
-つけ麺|1人前|つけめん|600|700
-焼きそば|1人前|やきそば|300|550
-カップラーメン|1個||77|350
-カップ焼きそば|1個|かっぷやきそば|130|550
-ミートソーススパゲッティ|1人前|みーとそーすすぱげってぃぱすた|400|600
-カルボナーラ|1人前|ぱすた|380|750
-ナポリタン|1人前|ぱすた|350|600
-ペペロンチーノ|1人前|ぱすた|300|550
-チャーハン|1人前|ちゃーはん|300|650
-カレーライス|1皿||450|750
-ハヤシライス|1皿||450|700
-牛丼|並盛|ぎゅうどん|380|650
-親子丼|1杯|おやこどん|450|700
-カツ丼|1杯|かつどん|480|900
-天丼|1杯|てんどん|400|800
-海鮮丼|1杯|かいせんどん|400|600
-オムライス|1皿||400|750
-寿司|にぎり1貫|すしにぎり|30|55
-寿司|にぎり10貫|すしにぎり|300|550
-いなり寿司|1個|いなりずし|45|100
-ピザ|1切れ||80|220
-お好み焼き|1枚|おこのみやき|300|550
-たこ焼き|6個|たこやき|150|280
-餃子|6個|ぎょうざ|150|300
-シュウマイ|4個|しゅうまい|80|170
-春巻き|1本|はるまき|50|150
-肉まん|1個|にくまん|100|250
-唐揚げ|5個|からあげ|150|410
-とんかつ|ロース1枚|とんかつ|130|560
-ヒレカツ|1枚|ひれかつ|120|380
-エビフライ|2本|えびふらい|80|200
-コロッケ|1個|ころっけ|80|180
-メンチカツ|1個|めんちかつ|100|280
-天ぷら|盛り合わせ|てんぷら|200|450
-ハンバーグ|1個|はんばーぐ|150|330
-生姜焼き|1人前|しょうがやき|150|380
-チキン南蛮|1人前|ちきんなんばん|200|550
-サラダチキン|1個|さらだちきん|110|120
-焼き鮭|1切れ|やきざけさけしゃけ|80|160
-焼きさば|1切れ|やきさば|100|260
-さんまの塩焼き|1尾|さんま|100|280
-刺身|盛り合わせ|さしみ|120|170
-焼き鳥|2本|やきとり|80|180
-焼肉（カルビ）|100g|やきにくかるび|100|400
-ステーキ|1枚|すてーき|150|450
-麻婆豆腐|1人前|まーぼーどうふ|250|350
-回鍋肉|1人前|ほいこーろー|200|400
-青椒肉絲|1人前|ちんじゃおろーす|200|300
-酢豚|1人前|すぶた|250|450
-エビチリ|1人前|えびちり|200|280
-肉じゃが|1人前|にくじゃが|250|300
-筑前煮|1人前|ちくぜんに|200|200
-すき焼き|1人前|すきやき|350|650
-グラタン|1皿||300|450
-クリームシチュー|1皿|くりーむしちゅー|300|350
-おでん|盛り合わせ||400|300
-味噌汁|1杯|みそしる|180|40
-豚汁|1杯|とんじる|250|140
-卵焼き|2切れ|たまごやき|60|90
-目玉焼き|1個|めだまやき|55|100
-ゆで卵|1個|ゆでたまご|50|70
-納豆|1パック|なっとう|45|90
-冷奴|1/3丁|ひややっことうふ|100|70
-野菜サラダ|ドレッシングあり|やさいさらだ|120|80
-ポテトサラダ|小鉢|ぽてとさらだ|100|160
-マカロニサラダ|小鉢|まかろにさらだ|100|190
-きんぴらごぼう|小鉢|きんぴらごぼう|70|80
-ほうれん草のおひたし|小鉢|ほうれんそうのおひたし|70|20
-ひじき煮|小鉢|ひじきに|60|60
-枝豆|小皿|えだまめ|70|95
-ウインナー|3本|うぃんなーそーせーじ|60|190
-ベーコン|2枚|べーこん|40|160
-ハム|2枚|はむ|20|40
-バナナ|1本||100|90
-りんご|1/2個||125|70
-みかん|1個||80|40
-いちご|5粒||75|25
-キウイ|1個||85|45
-ぶどう|1房の半分||100|60
-ヨーグルト（無糖）|1カップ|よーぐると|100|56
-ヨーグルト（加糖）|1カップ|よーぐると|100|80
-プリン|1個|ぷりん|100|120
-ショートケーキ|1個|しょーとけーき|110|350
-チーズケーキ|1個|ちーずけーき|100|310
-シュークリーム|1個|しゅーくりーむ|70|160
-ドーナツ|1個|どーなつ|60|230
-アイスクリーム|1個|あいすくりーむ|100|180
-ソフトクリーム|1個|そふとくりーむ|120|175
-チョコレート|板チョコ半分|ちょこれーと|25|140
-ポテトチップス|1袋|ぽてとちっぷす|60|330
-クッキー|3枚|くっきー|30|150
-せんべい|2枚|せんべい|30|110
-大福|1個|だいふく|70|160
-どら焼き|1個|どらやき|80|225
-みたらし団子|1本|みたらしだんご|60|120
-グラノーラ|1食|ぐらのーら|50|220
-コーンフレーク|1食|こーんふれーく|40|150
-オートミール|1食|おーとみーる|30|110
-プロテイン|1杯|ぷろていん|30|120
-牛乳|コップ1杯|ぎゅうにゅう|200|130
-豆乳|コップ1杯|とうにゅう|200|110
-オレンジジュース|コップ1杯|おれんじじゅーす|200|90
-コーラ|350ml缶|こーら|350|160
-スポーツドリンク|500mlペット|すぽーつどりんく|500|125
-缶コーヒー|1缶（加糖）|かんこーひー|185|70
-コーヒー|ブラック|こーひー|150|6
-カフェラテ|トール|かふぇらて|350|190
-お茶|ペットボトル|おちゃ|500|0
-ビール|350ml缶|びーる|350|140
-ビール|中ジョッキ|びーる|435|175
-ハイボール|1杯|はいぼーる|350|70
-チューハイ|350ml缶|ちゅーはい|350|180
-日本酒|1合|にほんしゅ|180|190
-ワイン|グラス1杯|わいん|120|80
-生卵|1個|なまたまご たまご|50|71
-卵かけご飯|1杯|たまごかけごはん たまご|200|330
-温泉卵|1個|おんせんたまご たまご|50|71
-クレアチン|5g|くれあちん さぷり さぷりめんと|5|0
-BCAA|1回分|びーしーえーえー さぷり|5|20
-EAA|1回分|いーえーえー さぷり|10|40
-マルチビタミン|1粒|まるちびたみん さぷり|1|0
-フィッシュオイル|2粒|ふぃっしゅおいる おめが さぷり|2|18
-ソイプロテイン|1杯|そいぷろていん ぷろていん|30|115
-プロテイン（牛乳割り）|1杯|ぷろていん ぎゅうにゅう|230|250
-プロテインバー|1本|ぷろていんばー|45|190
-鶏むね肉（皮なし）|100g|とりむねにく ちきん とりにく|100|105
-鶏むね肉（皮つき）|100g|とりむねにく とりにく|100|133
-ささみ|100g|ささみ とりにく|100|98
-鶏もも肉|100g|とりももにく とりにく|100|190
-豚ロース|100g|ぶたろーす ぶたにく|100|248
-豚バラ|100g|ぶたばら ぶたにく|100|366
-豚こま切れ|100g|ぶたこま ぶたにく|100|200
-牛もも|100g|ぎゅうもも ぎゅうにく|100|196
-牛バラ|100g|ぎゅうばら ぎゅうにく|100|380
-合いびき肉|100g|あいびきにく ひきにく|100|250
-鮭（生）|1切れ|さけ しゃけ さーもん|80|100
-サーモン刺身|5切れ|さーもん さしみ|60|130
-まぐろ赤身|刺身5切れ|まぐろ さしみ|60|70
-サバ缶（水煮）|1缶|さばかん さば|150|260
-ツナ缶（ノンオイル）|1缶|つなかん つな|70|50
-ツナ缶（油漬け）|1缶|つなかん つな|70|186
-豆腐（木綿）|1丁|とうふ もめんどうふ|300|219
-豆腐（絹）|1丁|とうふ きぬどうふ|300|168
-厚揚げ|1枚|あつあげ|150|215
-油揚げ|1枚|あぶらあげ|30|113
-ブロッコリー|100g|ぶろっこりー やさい|100|37
-キャベツ|100g|きゃべつ やさい|100|21
-レタス|100g|れたす やさい|100|11
-トマト|1個|とまと やさい|150|30
-ミニトマト|5個|みにとまと やさい|75|22
-きゅうり|1本|きゅうり やさい|100|13
-にんじん|1本|にんじん やさい|150|50
-玉ねぎ|1個|たまねぎ やさい|200|66
-じゃがいも|1個|じゃがいも|150|90
-焼き芋|1本|やきいも さつまいも|200|300
-かぼちゃ|100g|かぼちゃ|100|78
-アボカド|1個|あぼかど|140|250
-グレープフルーツ|1/2個|ぐれーぷふるーつ|150|60
-パイナップル|100g|ぱいなっぷる|100|54
-すいか|1切れ|すいか|200|80
-梨|1/2個|なし|130|55
-柿|1個|かき|180|113
-白米|100g|はくまい ごはん こめ|100|156
-もち|1個|もち おもち|50|112
-パスタ（ゆで）|100g|ぱすた すぱげってぃ|100|150
-パスタ（乾麺）|100g|ぱすた すぱげってぃ かんめん|100|347
-うどん（ゆで）|1玉|うどん|250|238
-そば（ゆで）|1玉|そば|200|260
-中華麺（ゆで）|1玉|ちゅうかめん|200|266
-そうめん（ゆで）|1束分|そうめん|130|148
-ベーグル|1個|べーぐる ぱん|90|243
-フランスパン|5cm|ふらんすぱん ばげっと ぱん|30|87
-ナン|1枚|なん|100|257
-低脂肪乳|コップ1杯|ていしぼうにゅう ぎゅうにゅう|200|90
-ギリシャヨーグルト|1個|ぎりしゃよーぐると よーぐると|113|92
-スライスチーズ|1枚|すらいすちーず ちーず|18|56
-6Pチーズ|1個|ろくぴーちーず ちーず|18|55
-カマンベールチーズ|1/6個|かまんべーる ちーず|17|50
-バター|10g|ばたー|10|70
-マーガリン|10g|まーがりん|10|72
-マヨネーズ|大さじ1|まよねーず|12|80
-ケチャップ|大さじ1|けちゃっぷ|15|16
-オリーブオイル|大さじ1|おりーぶおいる あぶら|12|107
-サラダ油|大さじ1|さらだあぶら あぶら|12|106
-砂糖|大さじ1|さとう|9|35
-はちみつ|大さじ1|はちみつ|21|69
-ごまドレッシング|大さじ1|ごまどれっしんぐ どれっしんぐ|15|60
-ノンオイルドレッシング|大さじ1|のんおいるどれっしんぐ どれっしんぐ|15|12
-醤油|大さじ1|しょうゆ|18|14
-味噌|大さじ1|みそ|18|35
-ジャム|大さじ1|じゃむ|21|53
-ピーナッツバター|大さじ1|ぴーなっつばたー|17|108
-アーモンド|10粒|あーもんど なっつ|12|73
-ミックスナッツ|ひとつかみ|みっくすなっつ なっつ|25|155
-くるみ|5個|くるみ なっつ|15|107
-ポップコーン|1袋|ぽっぷこーん|50|240
-グミ|1袋|ぐみ|50|170
-キムチ|小皿|きむち|50|14
-野菜炒め|1人前|やさいいため|200|200
-冷やし中華|1人前|ひやしちゅうか|450|550
-担々麺|1杯|たんたんめん|600|700
-ちゃんぽん|1杯|ちゃんぽん|700|700
-ビビンバ|1杯|びびんば|400|600
-幕の内弁当|1個|まくのうちべんとう べんとう|400|700
-のり弁当|1個|のりべんとう のりべん べんとう|400|750
-唐揚げ弁当|1個|からあげべんとう べんとう|450|900
-ハンバーグ弁当|1個|はんばーぐべんとう べんとう|450|850
-たまごサンド|1パック|たまごさんど さんどいっち|130|330
-フルーツサンド|1パック|ふるーつさんど さんどいっち|150|350
-おでん 大根|1個|おでん だいこん|80|10
-おでん 卵|1個|おでん たまご|50|76
-おでん はんぺん|1枚|おでん はんぺん|100|94
-おでん ちくわ|1本|おでん ちくわ|30|36
-おでん こんにゃく|1個|おでん こんにゃく|60|4
-水|500ml|みず|500|0
-炭酸水|500ml|たんさんすい|500|0
-麦茶|500ml|むぎちゃ おちゃ|500|5
-紅茶（無糖）|1杯|こうちゃ|150|2
-ミルクティー|500mlペット|みるくてぃー こうちゃ|500|185
-カフェオレ|500mlペット|かふぇおれ|500|200
-野菜ジュース|200ml|やさいじゅーす|200|70
-トマトジュース|200ml|とまとじゅーす|200|40
-りんごジュース|200ml|りんごじゅーす|200|88
-サイダー|500ml|さいだー|500|205
-レッドブル|250ml缶|れっどぶる えなじーどりんく|250|113
-モンスターエナジー|355ml缶|もんすたーえなじー えなじーどりんく|355|178
-ゼロカロリー飲料|1本|ぜろかろりー こーらぜろ|500|0
-甘酒|200ml|あまざけ|200|160
-ウイスキー|シングル30ml|ういすきー|30|70
-焼酎|水割り1杯|しょうちゅう|180|88
-レモンサワー|中ジョッキ|れもんさわー さわー ちゅーはい|350|160
-ストロング系チューハイ|350ml缶|すとろんぐ ちゅーはい|350|200
-ノンアルコールビール|350ml缶|のんあるこーるびーる のんある|350|20
-カップヌードル|日清|かっぷぬーどる にっしん かっぷらーめん|0|351
-どん兵衛 きつねうどん|日清|どんべえ きつねうどん にっしん|0|421
-赤いきつね|東洋水産|あかいきつね まるちゃん|0|432
-ビッグマック|マクドナルド|まくどなるど まっく まくど びっぐまっく|0|525
-ハンバーガー|マクドナルド|まくどなるど まっく まくど|0|256
-チーズバーガー|マクドナルド|まくどなるど まっく まくど|0|307
-ダブルチーズバーガー|マクドナルド|まくどなるど まっく まくど だぶちー|0|457
-てりやきマックバーガー|マクドナルド|まくどなるど まっく まくど てりやき|0|477
-フィレオフィッシュ|マクドナルド|まくどなるど まっく まくど ふぃれおふぃっしゅ|0|323
-エッグマックマフィン|マクドナルド|まくどなるど まっく まくど あさまっく|0|311
-マックフライポテト（S）|マクドナルド|まくどなるど まっく まくど ぽてと|0|225
-マックフライポテト（M）|マクドナルド|まくどなるど まっく まくど ぽてと|0|409
-マックフライポテト（L）|マクドナルド|まくどなるど まっく まくど ぽてと|0|517
-チキンマックナゲット 5ピース|マクドナルド|まくどなるど まっく まくど なげっと|0|270
-ホットアップルパイ|マクドナルド|まくどなるど まっく まくど あっぷるぱい|0|211
-オリジナルチキン|ケンタッキー 1ピース|けんたっきー けんた けーえふしー ちきん|0|237
-モスバーガー|モスバーガー|もすばーがー もす|0|367
-テリヤキバーガー|モスバーガー|もすばーがー もす てりやき|0|378
-モスチーズバーガー|モスバーガー|もすばーがー もす|0|416
-ワッパー|バーガーキング|ばーがーきんぐ わっぱー|0|650
-牛丼（並盛）|吉野家|よしのや ぎゅうどん|0|635
-牛丼（並盛）|すき家|すきや ぎゅうどん|0|733
-牛めし（並盛）|松屋|まつや ぎゅうめし ぎゅうどん|0|692
-ポークカレー（ご飯300g）|CoCo壱番屋|ここいちばんや ここいち かれー|0|735
-かけうどん（並）|丸亀製麺|まるがめせいめん まるがめ うどん|0|300
-ミラノ風ドリア|サイゼリヤ|さいぜりや さいぜ どりあ|0|520
-スターバックス ラテ（トール）|スターバックス|すたーばっくす すたば らて|0|223
-ドリップコーヒー（トール）|スターバックス|すたーばっくす すたば こーひー|0|11
-キャラメル フラペチーノ（トール）|スターバックス|すたーばっくす すたば ふらぺちーの|0|341
-ポン・デ・リング|ミスタードーナツ|みすたーどーなつ みすど ぽんでりんぐ|0|219
-オールドファッション|ミスタードーナツ|みすたーどーなつ みすど|0|306
-エンゼルフレンチ|ミスタードーナツ|みすたーどーなつ みすど|0|213
-ローストチキン|サブウェイ|さぶうぇい さんどいっち|0|300
-ファミチキ|ファミリーマート|ふぁみりーまーと ふぁみま ふぁみちき|0|252
-からあげクン レギュラー|ローソン|ろーそん からあげくん|0|220`.split("\n").map(l => {
-  const [name, note, yomi, g, kcal] = l.split("|");
-  return { name, note, g:+g, kcal:+kcal, key:[name, yomi, note].map(norm).join("|"), src:"目安" };
-});
+const FOODS = String(window.FOODS_SRC || "").split("\n").map(l => {
+  const [name, note, yomi, g, kcal, p, f, c, su] = l.split("|");
+  const n = v => v === undefined || v === "" ? null : Number(v);
+  return { name, note, g:+g, kcal:+kcal, p:n(p), f:n(f), c:n(c), s:n(su), key:[name, yomi, note].map(norm).join("|"), src:"目安" };
+}).filter(e => e.name && !isNaN(e.kcal));
 // カタカナ・全角半角・大文字小文字の違いを吸収（入力途中のひらがなでも当たるように）
 function norm(s){
   return String(s || "").normalize("NFKC").toLowerCase()
@@ -1791,7 +1528,9 @@ function renderItems(){
       for (const e of list){
         const b = el("button"); b.type = "button";
         const nm = el("span", "nm2", e.name); if (e.note) nm.append(el("small", null, e.note));
-        b.append(el("span", "src", e.src), nm, el("span", "meta num", `${e.g > 0 ? e.g + "g・" : ""}${fmt(e.kcal)}kcal`));
+        const meta = el("span", "meta num", `${e.g > 0 ? e.g + "g・" : ""}${fmt(e.kcal)}kcal`);
+        if (e.p != null) meta.append(el("small", null, `P${e.p} F${e.f} C${e.c}`));
+        b.append(el("span", "src", e.src), nm, meta);
         b.addEventListener("pointerdown", ev => ev.preventDefault()); // 入力欄のフォーカスを保つ
         b.addEventListener("click", () => { pick(it, e); renderItems(); });
         sg.append(b);
@@ -1864,7 +1603,8 @@ $("shutter").addEventListener("click", () => { $("file").value = ""; $("file").c
 $("manual").addEventListener("click", () => {
   let at = Date.now();
   if (selDay !== dayKey(at)){ const d = new Date(dms(selDay)), n = new Date(); d.setHours(n.getHours(), n.getMinutes(), 0, 0); at = d.getTime(); }
-  openMeal({ id:newId(), eatenAt:at, items:[blank()], total:0, thumb:"", comment:"" }, true);
+  openMeal({ id:newId(), eatenAt:at, items:[blank()], total:0, thumb:"", comment:"", _barcode:pendingBarcode }, true);
+  pendingBarcode = null;
 });
 $("file").addEventListener("change", async () => {
   const f = $("file").files && $("file").files[0]; if (!f) return;
@@ -1872,7 +1612,8 @@ $("file").addEventListener("change", async () => {
   const eatenAt = f.lastModified && now - f.lastModified < 36 * 3600e3 && f.lastModified <= now + 6e4 ? f.lastModified : now;
   let thumb = "", big = "";
   try { thumb = await shrink(f, 480, .72); big = await shrink(f, 1400, .85); } catch {}
-  openMeal({ id:newId(), eatenAt, items:[blank()], total:0, thumb, comment:"", _photo:big || thumb, _photoChanged:true }, true);
+  openMeal({ id:newId(), eatenAt, items:[blank()], total:0, thumb, comment:"", _photo:big || thumb, _photoChanged:true, _barcode:pendingBarcode }, true);
+  pendingBarcode = null;
   if (!big) setStatus($("mStatus"), "写真を読み込めませんでした。手で入力してください。", "err");
   showReadBox();
 });
@@ -1930,6 +1671,7 @@ $("mSave").addEventListener("click", async () => {
       p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, cat:draft.cat, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
   const photo = draft._photoChanged && draft._photo;
+  if (draft._barcode) rememberBarcode(draft._barcode, items);
   $("mSave").disabled = true;
   try {
     await DB.put(m);
@@ -2773,6 +2515,7 @@ $("bpDel").addEventListener("click", async () => {
 /* ---------- 下の「＋ 記録」：タブに合わせて選べるようにする ---------- */
 const REC_OPTS = {
   meal:[["📷", "写真を撮って記録", "Claudeで料理とカロリーを読み取れます", () => $("shutter").click()],
+        ["🏷️", "バーコードを読む", "お菓子・飲み物などのパッケージ", () => openBarcode()],
         ["✏️", "手で入力", "写真なし・AIなしで入力します", () => $("manual").click()]],
   gym:[["🏋️", "トレーニングを記録", "種目・重さ・回数を入れます", () => $("gAdd").click()]],
   body:[["⚖️", "体重を記録", "体脂肪率もいっしょに入れられます", () => $("wAdd").click()],
@@ -2979,6 +2722,135 @@ $("aCopyUrl").addEventListener("click", async () => {
   catch { setStatus($("aHelpStatus"), "コピーできませんでした。", "err"); }
 });
 
+/* ---------- バーコード（JANコード）：カメラで読む → 自分の記録 → Open Food Facts の順に探す ---------- */
+const BKEY = "foodlog.barcodes"; // {コード: {name, g, kcal, p, f, c, s}}（見つからなかった商品を、記録した内容で覚えておく）
+const readBC = () => { try { return JSON.parse(localStorage.getItem(BKEY) || "{}"); } catch { return {}; } };
+const writeBC = m => { try { localStorage.setItem(BKEY, JSON.stringify(m)); } catch {} };
+const isCode = c => /^\d{8}$|^\d{12,14}$/.test(c);
+let scan = null, pendingBarcode = null, bcFound = null;
+const ZXING = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+const loadZXing = () => window.ZXing ? Promise.resolve() : new Promise((res, rej) => {
+  const s = document.createElement("script"); s.src = ZXING; s.onload = res; s.onerror = () => rej(new Error("zxing")); document.head.append(s);
+});
+function stopScan(){
+  if (!scan) return;
+  try { scan.stop(); } catch {}
+  scan = null;
+}
+async function openBarcode(){
+  bcFound = null;
+  $("bcCam").hidden = false; $("bcResult").hidden = true; $("bcCode").value = "";
+  setStatus($("bcStatus"), "カメラを準備しています", "busy");
+  show($("bcSheet"));
+  const video = $("bcVideo");
+  try {
+    // 端末にバーコードを読む機能があればそれを使い、なければZXing（ライブラリ）で読む
+    if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("ean_13")){
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:"environment" } }, audio:false });
+      video.srcObject = stream; await video.play();
+      const det = new BarcodeDetector({ formats:["ean_13", "ean_8", "upc_a", "upc_e"] });
+      let alive = true;
+      scan = { stop(){ alive = false; stream.getTracks().forEach(t => t.stop()); video.srcObject = null; } };
+      const tick = async () => {
+        if (!alive) return;
+        try { const r = await det.detect(video); if (r && r[0]) return onCode(r[0].rawValue); } catch {}
+        setTimeout(tick, 200);
+      };
+      tick();
+    } else {
+      await loadZXing();
+      const Z = window.ZXing, hints = new Map();
+      hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E]);
+      // カメラはこちらで開いて（許可されないときにすぐ気づけるように）、映像をZXingに渡す
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:"environment" } }, audio:false });
+      const reader = new Z.BrowserMultiFormatReader(hints);
+      scan = { stop(){ try { reader.reset(); } catch {} stream.getTracks().forEach(t => t.stop()); video.srcObject = null; } };
+      reader.decodeFromStream(stream, video, r => { if (r && scan) onCode(r.getText()); });
+    }
+    setStatus($("bcStatus"), "バーコードを枠の中に写してください。");
+  } catch (e){
+    stopScan();
+    setStatus($("bcStatus"), e && e.name === "NotAllowedError" ? "カメラが使えません。iPhoneの設定でカメラを許可するか、下に数字を入れてください。"
+      : "カメラを使えませんでした。下にバーコードの数字を入れてください。", "err");
+  }
+}
+$("bcSearch").addEventListener("click", () => { const c = $("bcCode").value.replace(/\D/g, ""); if (isCode(c)) onCode(c); else setStatus($("bcStatus"), "8桁か13桁の数字を入れてください。", "err"); });
+$("bcCancel").addEventListener("click", hide);
+
+async function onCode(code){
+  if (!scan && !$("bcSheet").classList.contains("open")) return;
+  stopScan();
+  if (navigator.vibrate) try { navigator.vibrate(60); } catch {}
+  $("bcCam").hidden = true;
+  setStatus($("bcStatus"), `${code} を調べています`, "busy");
+  // 1) 前に自分で記録した商品
+  const mine = readBC()[code];
+  if (mine) return showBC({ code, name:mine.name, base:mine, amount:mine.g || 0, src:"前に記録した内容" });
+  // 2) Open Food Facts（世界中の人が登録している食品データベース）
+  try {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_ja,brands,nutriments,serving_quantity,product_quantity`, { signal:ctl.signal });
+    clearTimeout(t);
+    const j = await r.json();
+    const p = j && j.status === 1 && j.product;
+    const n = (p && p.nutriments) || {};
+    const kcal100 = n["energy-kcal_100g"] ?? (n["energy_100g"] != null ? n["energy_100g"] / 4.184 : null);
+    if (p && kcal100 != null){
+      const num = v => v == null || v === "" || isNaN(Number(v)) ? null : Number(v);
+      const c = num(n.carbohydrates_100g), fib = num(n.fiber_100g);
+      const base = { g:100, kcal:Number(kcal100), p:num(n.proteins_100g), f:num(n.fat_100g), c, s:c != null && fib != null ? Math.max(0, c - fib) : null };
+      const name = [p.brands ? String(p.brands).split(",")[0] : "", p.product_name_ja || p.product_name || ""].filter(Boolean).join(" ").trim() || `商品 ${code}`;
+      const amount = Number(p.serving_quantity) || Number(p.product_quantity) || 100;
+      return showBC({ code, name, base, amount, src:"Open Food Facts" });
+    }
+  } catch {}
+  // 3) 見つからない
+  showBC({ code, notFound:true });
+}
+function showBC(r){
+  bcFound = r;
+  const box = $("bcResult"); box.hidden = false; box.textContent = "";
+  if (r.notFound){
+    setStatus($("bcStatus"), `${r.code} の商品は見つかりませんでした。`, "err");
+    box.append(el("p", "help", "パッケージの栄養成分表示を撮ると、Claudeが読み取ります。一度記録すると、次からこのバーコードで出てきます。"));
+    const b1 = el("button", "btn primary", "栄養成分表示を撮って読み取る"); b1.type = "button";
+    b1.addEventListener("click", () => { pendingBarcode = r.code; hide(); $("shutter").click(); });
+    const b2 = el("button", "btn plain", "手で入力する"); b2.type = "button";
+    b2.addEventListener("click", () => { pendingBarcode = r.code; hide(); $("manual").click(); });
+    box.append(b1, b2);
+    return;
+  }
+  setStatus($("bcStatus"), `見つかりました（${r.src}）。量を確かめて「記録する」を押してください。`);
+  const g = el("div", "group");
+  const nameRow = el("div", "row"), name = el("input"); name.type = "text"; name.value = r.name; name.setAttribute("aria-label", "商品名"); nameRow.append(name);
+  const amtRow = el("div", "row"), amt = el("input"); amt.type = "number"; amt.inputMode = "decimal"; amt.min = "0"; amt.value = r.amount || "";
+  amt.style.textAlign = "right"; amt.style.fontWeight = "700";
+  amtRow.append(el("label", null, "食べた量"), amt, el("span", "u", r.base.g ? "g" : "個"));
+  g.append(nameRow, amtRow);
+  const out = el("div", "bcnut num");
+  const calc = () => {
+    const k = r.base.g ? (Number(amt.value) || 0) / r.base.g : (Number(amt.value) || 1);
+    const v = x => x == null ? null : Math.round(x * k * 10) / 10;
+    return { name:name.value.trim() || r.name, g:r.base.g ? Math.round(Number(amt.value) || 0) : 0, kcal:Math.round(r.base.kcal * k), p:v(r.base.p), f:v(r.base.f), c:v(r.base.c), s:v(r.base.s), source:"label" };
+  };
+  const upd = () => { const it = calc(); out.textContent = `${fmt(it.kcal)} kcal` + (it.p != null ? `・P ${it.p}g・F ${it.f}g・C ${it.c}g` : ""); };
+  amt.addEventListener("input", upd); upd();
+  const go = el("button", "btn primary", "この内容で記録する"); go.type = "button";
+  go.addEventListener("click", () => {
+    const it = calc(); hide();
+    openMeal({ id:newId(), eatenAt:Date.now(), items:[it], total:it.kcal, thumb:"", comment:"", _barcode:r.code }, true);
+    setStatus($("mStatus"), "バーコードの商品を入れました。違うところは直して「記録する」を押してください。");
+  });
+  box.append(g, out, go);
+}
+// 記録した内容をバーコードと結びつけて覚える（見つからなかった商品も、次から一発で出る）
+function rememberBarcode(code, items){
+  if (!code || !items.length) return;
+  const it = items[0], m = readBC();
+  m[code] = { name:it.name, g:it.g || 0, kcal:it.kcal, p:it.p ?? null, f:it.f ?? null, c:it.c ?? null, s:it.s ?? null };
+  writeBC(m);
+}
+
 /* ---------- 体重の記録 ---------- */
 function openWeight(date){
   $("wDate").value = date || ymd(Date.now());
@@ -3180,7 +3052,7 @@ $("sImport").addEventListener("click", async () => {
 const MOVE = "foodlog-move:";
 $("mvCopy").addEventListener("click", async () => {
   grab();
-  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, workouts, closed:readClosed(), queue:readQ() });
+  const text = MOVE + JSON.stringify({ v:1, settings, meals, weights, workouts, closed:readClosed(), barcodes:readBC(), queue:readQ() });
   try {
     await navigator.clipboard.writeText(text);
     setStatus($("mvStatus"), `コピーしました（記録${meals.length}件）。移した先で「貼り付けて取り込む」を押してください。`);
@@ -3208,6 +3080,7 @@ async function importMove(text){
     if (s.profile && typeof s.profile === "object") Object.assign(settings.profile, s.profile);
     if (typeof s.dopamine === "boolean") settings.dopamine = s.dopamine;
     if (d.closed && typeof d.closed === "object") writeClosed({ ...d.closed, ...readClosed() });
+    if (d.barcodes && typeof d.barcodes === "object") writeBC({ ...d.barcodes, ...readBC() });
     saveSettings();
     for (const w of Array.isArray(d.weights) ? d.weights : []){
       if (!w || !/^\d{4}-\d{2}-\d{2}$/.test(w.date) || !(w.kg > 0)) continue;

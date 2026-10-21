@@ -1,6 +1,6 @@
 // オフラインでも開けるようにアプリ本体をキャッシュ（記録はスマホ内に保存）
-const CACHE = 'foodlog-v21';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
+const CACHE = 'foodlog-v22';
+const FILES = ['./', './index.html', './foods.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
   ...['machdash1', 'drum-japanese1', 'metal-logo1', 'air-horn1', 'trumpet1', 'mens-yeah1', 'shine4'].map(n => `./sfx/${n}.mp3`)]; // 効果音ラボの音源
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
