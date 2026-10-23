@@ -5,7 +5,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 
 ## ファイル構成
 - `index.html` — アプリ本体（CSS・JSすべて内包）
-- `foods.js` — 料理名の候補（目安表）`window.FOODS_SRC`。1行＝名前|量|よみ|g|kcal|P|F|C|糖質（約500件、チェーン店は公表値などからの概算）
+- `foods.js` — 料理名の候補（目安表）`window.FOODS_SRC`。1行＝名前|量|よみ|g|kcal|P|F|C|糖質|値段（約500件、チェーン店は公表値などからの概算。値段はチェーン店など約60件だけ、税込の店頭価格の目安で `window.FOODS_PRICE_AT` 時点。値上げがあるので定期的に見直す）
 - `sw.js` — Service Worker。アプリ本体をキャッシュ（同一オリジンのGETのみ、network-first）
 - `manifest.webmanifest`, `icon-*.png` — PWA設定とアイコン
 - `Code.gs` — Googleスプレッドシート側のApps Script（ウェブアプリとしてデプロイ）
@@ -25,11 +25,14 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
   見つからないときは写真か手入力に `_barcode` を引き継ぎ、保存時に `rememberBarcode()` で覚える。引っ越しにも入れる。
 - **手入力**：下の「手入力」ボタン。写真なし・AIなしで同じ編集画面を開く。
 - **料理名の候補（AIなし）**：過去の記録（「前回」）と、`foods.js` の目安表（`FOODS`、「目安」、
-  `名前|量のめやす|よみ|g|kcal|P|F|C|糖質`）から出す。よみは空白区切りで複数（チェーン名・略称など）。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
+  `名前|量のめやす|よみ|g|kcal|P|F|C|糖質|値段`）から出す。よみは空白区切りで複数（チェーン名・略称など）。`norm()` でカタカナ→ひらがな等をそろえ、入力途中のひらがなでも当たる。
   グラムを変えるとカロリーと栄養素は `_base`（その時点のg・kcal・栄養素、保存しない）から `scaleTo()` で比例して変わる。
-  栄養素は任意（品目の「栄養素」で開く）。値がないものは null で、0g とは区別する。目安表の栄養素も、選ぶとグラムに合わせて入る。
+  栄養素と値段は任意（品目の「栄養・値段」で開く）。値がないものは null で、0g・0円とは区別する。目安表の栄養素・値段も、選ぶとグラムに合わせて入る。
+- **値段（食費）**：品目の `yen`（円・概算、null可）。写真の読み取りでは `PROMPT` で yen も推定（手作りは材料費、店の商品は販売価格）。
+  手入力の品目は「値段をAIで見積もる」（`YEN_PROMPT`、文字だけでHaiku、1回約0.1円）で、値段が空の品目だけ埋める。
+  食事タブにその日の食費・その月の合計と1日あたり（値段のある記録の日数で割る）、区分の見出しにも合計。シートはE列の各品目の末尾に `¥60`（`parseDetail` で戻す）。
 - **保存**：IndexedDB（DB名 `foodlog`、ストア `meals`、keyPath `id`）。
-  1件 = `{id, eatenAt(ms), items[{name,g,kcal,p,f,c,s,source}], total, thumb(dataURL), comment, savedAt}`。
+  1件 = `{id, eatenAt(ms), items[{name,g,kcal,p,f,c,s,yen,source}], total, thumb(dataURL), comment, savedAt}`。
 - **設定**：localStorage `foodlog.settings`（APIキー、モデル、Apps ScriptのURL、合言葉）。
   APIキーはコードやリポジトリに絶対に入れない。
 - **スプレッドシート連携**：Apps ScriptのURLに `text/plain` でJSONをPOST（CORSのプリフライト回避）。
@@ -61,6 +64,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **運動の分を目安に足す**：`settings.profile.addMode`（none／gym 筋トレの記録／apple Appleの動いた分。旧 `addBurn` は gym 扱い）。足すときは活動係数1.2。
 - **動いた分（Appleフィットネス）**：localStorage `foodlog.activity`（`{日付:{kcal, src}}`）。スプレッドシートの「活動」シート（A日付 B kcal C元）に
   iPhoneのショートカットが `activity_put` で書き込み、アプリは `activity_list` で取り込む（起動時・5分ごと）。手入力も `activity_put`。手順は設定の「Appleフィットネス連携」。
+  からだタブのカードは `actDay`（見ている日）を「‹ 前の日／次の日 ›」と7日の棒のタップで切り替え、「この日を直す」でその日を手で直せる。
 - **顔・体のAIレビュー**：全画面の各写真に「Sonnet／Haikuでレビュー」。前の同じ種類の写真と今回を送り（`askClaude` の第4引数で中身を渡す）、
   `{summary, good, care, tips, bodyfat, change}` を写真の記録の `review` に保存。医療的な診断・容姿の採点はしない指示。`stop_reason: refusal` は専用の文言。
 - **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から

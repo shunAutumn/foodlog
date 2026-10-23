@@ -371,6 +371,8 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .bpcap{color:#fff; text-align:center; display:flex; flex-direction:column; gap:2px; font-size:.9rem}
 .bpcap span{color:rgba(255,255,255,.75); font-size:.82rem}
 .week.mini{height:64px; margin-top:10px}
+.actnav{display:flex; align-items:center; justify-content:space-between; margin:2px 0 6px; font-size:.9rem}
+.actnav .linkbtn:disabled{opacity:.3}
 .pace.comp b{font-weight:800}
 .ranges.small{margin-top:10px}
 .ranges.small button{font-size:.72rem; padding:5px 0}
@@ -415,10 +417,11 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .item .u{color:var(--muted); font-size:.85rem; min-width:2.2em}
 .item .tag{font-size:.68rem; font-weight:800; color:var(--label); border:1.5px solid currentColor; border-radius:6px; padding:1px 5px; flex:none}
 .item .x{border:0; background:var(--surface2); width:28px; height:28px; border-radius:50%; cursor:pointer; flex:none; color:var(--muted)}
-.nuttoggle{margin-right:auto; border:0; background:none; color:var(--accent); font-weight:700; font-size:.8rem; padding:6px 0; cursor:pointer}
+.nuttoggle{margin-right:auto; white-space:nowrap; border:0; background:none; color:var(--accent); font-weight:700; font-size:.8rem; padding:6px 0; cursor:pointer}
 .nuttoggle::after{content:" ＋"}
 .nuttoggle[aria-expanded=true]::after{content:" －"}
-.nuts{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px}
+.nuts{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:8px}
+.yenask{text-align:right; margin:2px 8px 0}
 .nut{display:flex; flex-direction:column; gap:3px; font-size:.68rem; font-weight:700; color:var(--muted); text-align:center}
 .item .nut input{width:100%; padding:6px 4px; text-align:center}
 .nutsum{margin:4px 8px 0; text-align:right; color:var(--muted); font-size:.82rem; font-weight:600; min-height:1em}
@@ -463,6 +466,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
     <div class="meter" id="meter" hidden><i id="meterFill"></i></div>
     <div class="sub" id="todaySub">きょうはまだ記録がありません</div>
     <div class="sub num" id="todayNuts" hidden></div>
+    <div class="sub num" id="todayYen" hidden></div>
     <div class="sub num" id="todayBurn" hidden></div>
     <div id="dayCloseBox"></div>
     <div class="week" id="week" aria-label="直近7日間（タップでその日を見る）"></div>
@@ -582,6 +586,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
 
     <div class="totalrow"><span style="font-weight:700">合計</span><span><span class="v num" id="mTotal">0</span> kcal</span></div>
     <p class="nutsum num" id="mNuts"></p>
+    <div class="yenask"><button class="linkbtn" id="mYen" type="button" hidden>値段をAIで見積もる（約0.1円）</button></div>
 
     <button class="btn primary" id="mSave" type="button">記録する</button>
     <button class="btn plain" id="mCancel" type="button">キャンセル</button>
@@ -994,6 +999,13 @@ function render(){
     tn = `たんぱく質 ${fmt(pr)} / ${pl.protein}g` + (rest ? "・" + rest : "");
   }
   $("todayNuts").textContent = tn; $("todayNuts").hidden = !tn;
+  // 食費（品目の値段の合計）。その日と、その月の合計・1日あたり
+  const mYen = m => ysum(m.items || []);
+  const dy = ysum(dayMeals.map(m => ({ yen:mYen(m) })));
+  const inMonth = meals.filter(m => dayKey(m.eatenAt).slice(0, 7) === selDay.slice(0, 7) && mYen(m) != null);
+  const my = inMonth.reduce((s, m) => s + mYen(m), 0), md = new Set(inMonth.map(m => dayKey(m.eatenAt))).size;
+  $("todayYen").textContent = inMonth.length ? [dy != null ? `食費 約¥${fmt(dy)}` : "", `${Number(selDay.slice(5, 7))}月 約¥${fmt(my)}（1日あたり ¥${fmt(Math.round(my / md))}）`].filter(Boolean).join("・") : "";
+  $("todayYen").hidden = !inMonth.length;
 
   // 週の棒：タップでその日を見る（選んだ日が7日より前なら、その日までの7日）
   const end = selDay < dayKey(now.getTime() - 6 * 864e5) ? new Date(dms(selDay)) : now;
@@ -1023,7 +1035,8 @@ function render(){
     for (const cat of CATS){
       const inCat = arr.filter(m => mealCat(m) === cat);
       if (!inCat.length) continue;
-      const ch = el("div", "cathead"); ch.append(el("span", null, cat), el("span", "num", `${fmt(inCat.reduce((t, m) => t + (m.total || 0), 0))} kcal`));
+      const cy = ysum(inCat.map(m => ({ yen:ysum(m.items || []) })));
+      const ch = el("div", "cathead"); ch.append(el("span", null, cat), el("span", "num", `${fmt(inCat.reduce((t, m) => t + (m.total || 0), 0))} kcal${cy != null ? `・¥${fmt(cy)}` : ""}`));
       const g = el("div", "grid");
       for (const m of inCat){
         const b = el("button", "tile"); b.type = "button";
@@ -1256,10 +1269,11 @@ const PROMPT =
 - 料理名は日本語で短く。
 - g には写っている量（グラム）を入れる。表示があればその値、なければ見た目から推定する。飲み物は ml をそのまま g として扱う。
 - p（たんぱく質）、f（脂質）、c（炭水化物）、sugar（糖質＝炭水化物から食物繊維を除いたもの）を、その量あたりのグラム数で入れる（小数1桁まで）。表示があればその値、なければ一般的な値から推定する。
+- yen には、その量の値段の目安（日本円・税込の整数）を入れる。手作りの弁当・自炊の料理に見えるものは、スーパーで材料を買った場合の材料費の概算。お店・コンビニ・チェーン店の商品に見えるもの（容器・包装・店名などから判断）は、その販売価格の目安。値札やレシートが写っていればその金額を使う。
 - 食べ物が写っていない場合は items を空配列にし、comment に理由を書く。
 
 次の形式のJSONだけを返してください（前後に文章やコードブロックを付けない）:
-{"items":[{"name":"料理名","g":数値,"kcal":数値,"p":数値,"f":数値,"c":数値,"sugar":数値,"source":"label"または"estimate"}],"comment":"量の前提など30字以内のメモ"}`;
+{"items":[{"name":"料理名","g":数値,"kcal":数値,"p":数値,"f":数値,"c":数値,"sugar":数値,"yen":数値,"source":"label"または"estimate"}],"comment":"量や値段の前提など30字以内のメモ"}`;
 
 /* ---------- API使用量（1回ごとの実際のトークン数を月ごとに足していく） ---------- */
 const PRICES = { "claude-sonnet-5-5":{ in:2, out:10, label:"Sonnet" }, "claude-haiku-5-5":{ in:0.1, out:0.5, label:"Haiku" } }; // $ / 100万トークン
@@ -1334,7 +1348,7 @@ function sheetRow(m){
     m.total || 0,
     safe(items.map(i => {
       const n = NUTS.filter(([k]) => i[k] != null).map(([k, , short]) => `${short}${i[k]}`).join(" ");
-      return `${i.name || "（名前なし）"} ${i.g > 0 ? i.g + "g " : ""}${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}${n ? `［${n}］` : ""}`;
+      return `${i.name || "（名前なし）"} ${i.g > 0 ? i.g + "g " : ""}${i.kcal || 0}kcal${i.source === "label" ? "（表示）" : ""}${n ? `［${n}］` : ""}${i.yen != null ? `¥${i.yen}` : ""}`;
     }).join("、")),
     safe(m.comment || ""),
     m.id
@@ -1430,26 +1444,30 @@ const NUTS = [["p", "たんぱく質", "P"], ["f", "脂質", "F"], ["c", "炭水
 const r1 = x => Math.round(x * 10) / 10;
 const nut = v => v === "" || v == null || isNaN(Number(v)) ? null : Math.max(0, r1(Number(v)));
 const hasNuts = it => NUTS.some(([k]) => it[k] != null);
-const blank = () => ({ name:"", g:0, kcal:0, p:null, f:null, c:null, s:null, source:"manual", _base:null });
-// グラムを変えたときにカロリー・栄養素を比例させるための基準（保存しない）
-const withBase = it => { it._base = it.g > 0 ? { g:it.g, kcal:it.kcal, p:it.p, f:it.f, c:it.c, s:it.s } : null; return it; };
+const blank = () => ({ name:"", g:0, kcal:0, p:null, f:null, c:null, s:null, yen:null, source:"manual", _base:null });
+// 値段（円・概算）。値がないときは null
+const yenv = v => v === "" || v == null || isNaN(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
+const ysum = items => items.some(i => i.yen != null) ? items.reduce((s, i) => s + (Number(i.yen) || 0), 0) : null;
+// グラムを変えたときにカロリー・栄養素・値段を比例させるための基準（保存しない）
+const withBase = it => { it._base = it.g > 0 ? { g:it.g, kcal:it.kcal, p:it.p, f:it.f, c:it.c, s:it.s, yen:it.yen } : null; return it; };
 function scaleTo(it, g){
   it.g = g; const b = it._base;
   if (!b || !(g > 0)) return;
   const k = g / b.g;
   it.kcal = Math.round(b.kcal * k);
   for (const [n] of NUTS) it[n] = b[n] == null ? null : r1(b[n] * k);
+  it.yen = b.yen == null ? null : Math.round(b.yen * k);
 }
 // 食事全体の栄養素合計（どの品目にも値がなければ null）
 const nsum = (items, k) => items.some(i => i[k] != null) ? r1(items.reduce((s, i) => s + (Number(i[k]) || 0), 0)) : null;
 const nutLine = items => NUTS.map(([k, label]) => [label, nsum(items, k)]).filter(([, v]) => v != null).map(([l, v]) => `${l} ${fmt(v)}g`).join("・");
 
 /* ---------- 料理名の候補（AIなし：過去の記録＋目安表） ---------- */
-// 名前|量のめやす|よみ|g|kcal（一般的な1人前の目安。文部科学省「日本食品標準成分表」などを参考にした概算）
+// 名前|量のめやす|よみ|g|kcal|P|F|C|糖質|値段（一般的な1人前の目安。文部科学省「日本食品標準成分表」などを参考にした概算。値段はチェーン店などの店頭価格で、FOODS_PRICE_AT 時点）
 const FOODS = String(window.FOODS_SRC || "").split("\n").map(l => {
-  const [name, note, yomi, g, kcal, p, f, c, su] = l.split("|");
+  const [name, note, yomi, g, kcal, p, f, c, su, yen] = l.split("|");
   const n = v => v === undefined || v === "" ? null : Number(v);
-  return { name, note, g:+g, kcal:+kcal, p:n(p), f:n(f), c:n(c), s:n(su), key:[name, yomi, note].map(norm).join("|"), src:"目安" };
+  return { name, note, g:+g, kcal:+kcal, p:n(p), f:n(f), c:n(c), s:n(su), yen:n(yen), key:[name, yomi, note].map(norm).join("|"), src:"目安" };
 }).filter(e => e.name && !isNaN(e.kcal));
 // カタカナ・全角半角・大文字小文字の違いを吸収（入力途中のひらがなでも当たるように）
 function norm(s){
@@ -1464,7 +1482,7 @@ function buildHistory(){
       const k = norm(i.name);
       if (!k || !(i.kcal > 0) || seen.has(k)) continue;
       const d = FOODS.find(f => norm(f.name) === k); // 目安表にある名前なら、よみでも当たるように
-      seen.set(k, { name:i.name, note:"", g:i.g || 0, kcal:i.kcal, p:i.p, f:i.f, c:i.c, s:i.s, key:d ? d.key : k, src:"前回" });
+      seen.set(k, { name:i.name, note:"", g:i.g || 0, kcal:i.kcal, p:i.p, f:i.f, c:i.c, s:i.s, yen:i.yen ?? (d ? d.yen : null), key:d ? d.key : k, src:"前回" });
     }
   past = [...seen.values()];
 }
@@ -1478,6 +1496,7 @@ function suggest(q){
 function pick(it, e){
   it.name = e.name; it.kcal = e.kcal;
   for (const [k] of NUTS) it[k] = e[k] ?? null;
+  it.yen = e.yen ?? null;
   if (e.g > 0){
     const g = it.g > 0 ? it.g : e.g;
     it.g = e.g; withBase(it); scaleTo(it, g); // すでにグラムが入っていれば、その量に合わせる
@@ -1502,7 +1521,7 @@ function renderItems(){
     const g = num(it.g, "量（グラム）"), k = num(it.kcal, "カロリー");
 
     // 栄養素（任意）
-    const nb = el("div", "nuts"); nb.hidden = !(it._open || hasNuts(it));
+    const nb = el("div", "nuts"); nb.hidden = !(it._open || hasNuts(it) || it.yen != null);
     const nIn = {};
     for (const [key, label] of NUTS){
       const cell = el("label", "nut");
@@ -1511,12 +1530,16 @@ function renderItems(){
       i.addEventListener("input", () => { it[key] = nut(i.value); withBase(it); total(); });
       nIn[key] = i; cell.append(el("span", null, label), i); nb.append(cell);
     }
-    const tg = el("button", "nuttoggle", "栄養素"); tg.type = "button"; tg.setAttribute("aria-expanded", String(!nb.hidden));
+    const yc = el("label", "nut yen"), yi = el("input");
+    yi.type = "number"; yi.inputMode = "numeric"; yi.min = "0"; yi.placeholder = "—"; yi.value = it.yen ?? ""; yi.setAttribute("aria-label", "値段（円）");
+    yi.addEventListener("input", () => { it.yen = yenv(yi.value); withBase(it); total(); });
+    yc.append(el("span", null, "値段 円"), yi); nb.append(yc);
+    const tg = el("button", "nuttoggle", "栄養・値段"); tg.type = "button"; tg.setAttribute("aria-expanded", String(!nb.hidden));
     tg.addEventListener("click", () => { nb.hidden = !nb.hidden; it._open = !nb.hidden; tg.setAttribute("aria-expanded", String(!nb.hidden)); if (!nb.hidden) nIn.p.focus(); });
 
     g.addEventListener("input", () => {
       scaleTo(it, Number(g.value) || 0);
-      k.value = it.kcal || ""; for (const [key] of NUTS) nIn[key].value = it[key] ?? "";
+      k.value = it.kcal || ""; for (const [key] of NUTS) nIn[key].value = it[key] ?? ""; yi.value = it.yen ?? "";
       total();
     });
     k.addEventListener("input", () => { it.kcal = Number(k.value) || 0; it.source = "manual"; withBase(it); total(); });
@@ -1528,8 +1551,9 @@ function renderItems(){
       for (const e of list){
         const b = el("button"); b.type = "button";
         const nm = el("span", "nm2", e.name); if (e.note) nm.append(el("small", null, e.note));
-        const meta = el("span", "meta num", `${e.g > 0 ? e.g + "g・" : ""}${fmt(e.kcal)}kcal`);
+        const meta = el("span", "meta num", `${e.g > 0 ? e.g + "g・" : ""}${fmt(e.kcal)}kcal${e.yen != null ? `・¥${fmt(e.yen)}` : ""}`);
         if (e.p != null) meta.append(el("small", null, `P${e.p} F${e.f} C${e.c}`));
+        if (e.yen != null && e.src === "目安") meta.title = `値段は${window.FOODS_PRICE_AT || ""}時点の店頭価格の目安`;
         b.append(el("span", "src", e.src), nm, meta);
         b.addEventListener("pointerdown", ev => ev.preventDefault()); // 入力欄のフォーカスを保つ
         b.addEventListener("click", () => { pick(it, e); renderItems(); });
@@ -1537,7 +1561,7 @@ function renderItems(){
       }
       sg.hidden = !list.length;
     };
-    n.addEventListener("input", () => { it.name = n.value; showSugg(); });
+    n.addEventListener("input", () => { it.name = n.value; showSugg(); showYenBtn(); });
     n.addEventListener("focus", showSugg);
     n.addEventListener("blur", () => setTimeout(() => { sg.hidden = true; }, 200));
 
@@ -1550,8 +1574,42 @@ function renderItems(){
 }
 function total(){
   $("mTotal").textContent = fmt(sum(draft.items));
-  $("mNuts").textContent = nutLine(draft.items);
+  const y = ysum(draft.items);
+  $("mNuts").textContent = [nutLine(draft.items), y != null ? `値段 約¥${fmt(y)}` : ""].filter(Boolean).join("・");
+  showYenBtn();
 }
+// 値段が入っていない品目があれば「値段をAIで見積もる」を出す
+function showYenBtn(){
+  const b = $("mYen"); if (!b) return;
+  b.hidden = !(settings.key && draft && draft.items.some(i => (i.name || "").trim() && i.yen == null));
+}
+const YEN_PROMPT =
+`次の食べたものそれぞれについて、日本での値段の目安（税込・円・整数）を答えてください。
+- 店名・チェーン名・商品名からお店やコンビニの商品と分かるものは、その販売価格の目安。
+- それ以外は、手作り（お弁当・自炊）として、スーパーで材料を買った場合のその量の材料費の概算。
+- g は食べた量（グラム、0は不明）。
+次の形式のJSONだけを返してください（前後に文章を付けない）:
+{"items":[{"i":番号,"yen":数値}]}`;
+$("mYen").addEventListener("click", async () => {
+  if (!draft || !settings.key) return;
+  const mine = draft, list = mine.items.map((it, i) => ({ i, name:(it.name || "").trim(), g:it.g || 0 })).filter(x => x.name && mine.items[x.i].yen == null);
+  if (!list.length) return;
+  $("mYen").hidden = true;
+  setStatus($("mStatus"), "値段を見積もっています", "busy");
+  try {
+    const res = await askClaude(null, null, "claude-haiku-5-5", [{ type:"text", text:YEN_PROMPT + "\n\n" + JSON.stringify(list) + (mine.comment ? `\nメモ：${mine.comment}` : "") }]);
+    if (draft !== mine) return;
+    for (const r of (res.r && res.r.items) || []){
+      const it = mine.items[Number(r.i)], y = yenv(r.yen);
+      if (it && it.yen == null && y != null){ it.yen = y; withBase(it); }
+    }
+    renderItems();
+    setStatus($("mStatus"), "値段を見積もりました（概算）。違うところは「栄養・値段」で直せます。");
+  } catch (e){
+    if (draft !== mine) return;
+    setStatus($("mStatus"), readErr(e) || "見積もれませんでした。", "err"); showYenBtn();
+  }
+});
 function openMeal(m, isNew){
   buildHistory();
   m.items = (m.items || []).map(i => withBase({ ...blank(), ...i }));
@@ -1634,7 +1692,7 @@ const filled = () => draft.items.some(i => (i.name || "").trim() || i.kcal > 0);
 const mapItems = r => Array.isArray(r.items) ? r.items.map(i => withBase({
   name:String(i.name ?? "").slice(0, 60), g:Math.max(0, Math.round(Number(i.g) || 0)),
   kcal:Math.max(0, Math.round(Number(i.kcal) || 0)),
-  p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.sugar),
+  p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.sugar), yen:yenv(i.yen),
   source:i.source === "label" ? "label" : "estimate"
 })) : [];
 function useResult(res){
@@ -1666,9 +1724,9 @@ $("mReadAlt").addEventListener("click", () => readWith(otherModel(settings.model
 
 $("mSave").addEventListener("click", async () => {
   if (!draft) return;
-  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0 || hasNuts(i))
+  const items = draft.items.filter(i => (i.name || "").trim() || Number(i.kcal) > 0 || Number(i.g) > 0 || hasNuts(i) || i.yen != null)
     .map(i => ({ name:(i.name || "").trim(), g:Math.round(Number(i.g) || 0), kcal:Math.round(Number(i.kcal) || 0),
-      p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), source:i.source || "manual" }));
+      p:nut(i.p), f:nut(i.f), c:nut(i.c), s:nut(i.s), yen:yenv(i.yen), source:i.source || "manual" }));
   const m = { id:draft.id, eatenAt:draft.eatenAt, cat:draft.cat, items, total:sum(items), thumb:draft.thumb || "", comment:draft.comment || "", savedAt:Date.now() };
   const photo = draft._photoChanged && draft._photo;
   if (draft._barcode) rememberBarcode(draft._barcode, items);
@@ -2666,6 +2724,7 @@ const AKEY = "foodlog.activity";
 const readAct = () => { try { return JSON.parse(localStorage.getItem(AKEY) || "{}"); } catch { return {}; } };
 const writeAct = a => { try { localStorage.setItem(AKEY, JSON.stringify(a)); } catch {} };
 const activeOn = k => (readAct()[k] || {}).kcal || 0;
+let actDay = null; // からだタブで見ている日（null は今日）
 // スプレッドシートの「活動」シート（ショートカットが書き込む）から取ってくる
 let actPulled = 0;
 async function pullActivity(force){
@@ -2682,7 +2741,7 @@ async function pullActivity(force){
   } catch {}
 }
 function openAct(){
-  $("aDate").value = selDay || ymd(Date.now());
+  $("aDate").value = actDay || ymd(Date.now());
   const fill = () => { const v = readAct()[$("aDate").value]; $("aKcal").value = v ? v.kcal : ""; };
   fill(); $("aDate").onchange = fill;
   setStatus($("aStatus"), ""); show($("actSheet"));
@@ -2699,19 +2758,32 @@ $("aSave").addEventListener("click", () => {
 });
 function renderAct(){
   const tk = ymd(Date.now()), a = readAct(), box = $("actBox"); box.textContent = "";
-  const v = a[tk];
+  if (!actDay || actDay > tk) actDay = tk;
+  const day = actDay, v = a[day], isToday = day === tk;
+  // ‹ 前の日 ／ 次の日 ›
+  const shift = n => { const d = new Date(dms(day)); d.setDate(d.getDate() + n); actDay = ymd(d.getTime()); renderAct(); };
+  const nav = el("div", "actnav");
+  const prev = el("button", "linkbtn", "‹ 前の日"); prev.type = "button"; prev.addEventListener("click", () => shift(-1));
+  const next = el("button", "linkbtn", "次の日 ›"); next.type = "button"; next.disabled = isToday; next.addEventListener("click", () => shift(1));
+  nav.append(prev, el("b", null, dayLabel(day, tk)), next);
+  box.append(nav);
   const big = el("div", "wnow"); big.append(el("span", "big2 num", v ? fmt(v.kcal) : "—"), el("span", "unit", "kcal"),
-    el("span", "wdelta", v ? `今日・${v.src === "apple" ? "Appleフィットネス" : v.src || ""}` : "今日はまだありません"));
+    el("span", "wdelta", v ? (v.src === "apple" ? "Appleフィットネス" : v.src || "") : (isToday ? "今日はまだありません" : "この日の記録はありません")));
+  const edit = el("button", "chip", v ? "この日を直す" : "この日を入れる"); edit.type = "button"; edit.style.marginLeft = "auto";
+  edit.addEventListener("click", openAct); big.append(edit);
   box.append(big);
-  // 直近7日
+  // 7日分の棒（タップでその日を見る。見ている日が7日より前なら、その日までの7日）
   const wk = el("div", "week mini");
-  const days = []; for (let i = 6; i >= 0; i--){ const d = new Date(); d.setDate(d.getDate() - i); days.push(ymd(d.getTime())); }
+  const end = day < ymd(Date.now() - 6 * 864e5) ? dms(day) : Date.now();
+  const days = []; for (let i = 6; i >= 0; i--){ const d = new Date(end); d.setDate(d.getDate() - i); days.push(ymd(d.getTime())); }
   const max = Math.max(1, ...days.map(k => (a[k] || {}).kcal || 0));
   for (const k of days){
-    const c = el("div", "col" + (k === tk ? " today" : "")), b = el("div", "bar");
+    const c = el("button", "col" + (k === tk ? " today" : "") + (k === day ? " sel" : "")), b = el("div", "bar"); c.type = "button";
     b.style.height = `${Math.max(4, Math.round(((a[k] || {}).kcal || 0) / max * 40))}px`;
-    if ((a[k] || {}).kcal) b.style.background = "var(--accent)";
+    if ((a[k] || {}).kcal && k !== day) b.style.background = "var(--accent-soft)";
     c.title = `${Number(k.slice(5, 7))}/${Number(k.slice(8))} ${fmt((a[k] || {}).kcal || 0)}kcal`;
+    c.setAttribute("aria-label", `${dayLabel(k, tk)} ${fmt((a[k] || {}).kcal || 0)}kcal`);
+    c.addEventListener("click", () => { actDay = k; renderAct(); });
     c.append(b, el("div", "d", k === tk ? "今日" : WEEK[new Date(dms(k)).getDay()])); wk.append(c);
   }
   box.append(wk);
@@ -2831,7 +2903,7 @@ function showBC(r){
   const calc = () => {
     const k = r.base.g ? (Number(amt.value) || 0) / r.base.g : (Number(amt.value) || 1);
     const v = x => x == null ? null : Math.round(x * k * 10) / 10;
-    return { name:name.value.trim() || r.name, g:r.base.g ? Math.round(Number(amt.value) || 0) : 0, kcal:Math.round(r.base.kcal * k), p:v(r.base.p), f:v(r.base.f), c:v(r.base.c), s:v(r.base.s), source:"label" };
+    return { name:name.value.trim() || r.name, g:r.base.g ? Math.round(Number(amt.value) || 0) : 0, kcal:Math.round(r.base.kcal * k), p:v(r.base.p), f:v(r.base.f), c:v(r.base.c), s:v(r.base.s), yen:r.base.yen == null ? null : Math.round(r.base.yen * k), source:"label" };
   };
   const upd = () => { const it = calc(); out.textContent = `${fmt(it.kcal)} kcal` + (it.p != null ? `・P ${it.p}g・F ${it.f}g・C ${it.c}g` : ""); };
   amt.addEventListener("input", upd); upd();
@@ -2847,7 +2919,7 @@ function showBC(r){
 function rememberBarcode(code, items){
   if (!code || !items.length) return;
   const it = items[0], m = readBC();
-  m[code] = { name:it.name, g:it.g || 0, kcal:it.kcal, p:it.p ?? null, f:it.f ?? null, c:it.c ?? null, s:it.s ?? null };
+  m[code] = { name:it.name, g:it.g || 0, kcal:it.kcal, p:it.p ?? null, f:it.f ?? null, c:it.c ?? null, s:it.s ?? null, yen:it.yen ?? null };
   writeBC(m);
 }
 
@@ -2947,13 +3019,13 @@ $("sTest").addEventListener("click", async () => {
   }
   catch (e){ setStatus($("sStatus"), e.message === "unauthorized" ? "合言葉が一致しません。" : "つながりませんでした。URLとデプロイ設定を確認してください。", "err"); }
 });
-// E列「内訳」（例：ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
+// E列「内訳」（例：ご飯 150g 234kcal［P3.8 F0.5 C55.7 糖質53.4］¥60、みそ汁 40kcal（表示））を品目に戻す。読めなければ null
 function parseDetail(detail){
   const parts = String(detail || "").split("、").filter(Boolean), out = [];
   for (const p of parts){
-    const m = p.match(/^(.*?) (?:(\d+)g )?(\d+)kcal(（表示）)?(?:［(.*?)］)?$/);
+    const m = p.match(/^(.*?) (?:(\d+)g )?(\d+)kcal(（表示）)?(?:［(.*?)］)?(?:¥(\d+))?$/);
     if (!m) return null;
-    const it = { name:m[1] === "（名前なし）" ? "" : m[1], g:+(m[2] || 0), kcal:+m[3], p:null, f:null, c:null, s:null, source:m[4] ? "label" : "manual" };
+    const it = { name:m[1] === "（名前なし）" ? "" : m[1], g:+(m[2] || 0), kcal:+m[3], p:null, f:null, c:null, s:null, yen:m[6] ? +m[6] : null, source:m[4] ? "label" : "manual" };
     for (const [, key, v] of (m[5] || "").matchAll(/(糖質|P|F|C)([\d.]+)/g)) it[{ P:"p", F:"f", C:"c", 糖質:"s" }[key]] = +v;
     out.push(it);
   }
