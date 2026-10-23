@@ -371,8 +371,6 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .bpcap{color:#fff; text-align:center; display:flex; flex-direction:column; gap:2px; font-size:.9rem}
 .bpcap span{color:rgba(255,255,255,.75); font-size:.82rem}
 .week.mini{height:64px; margin-top:10px}
-.actnav{display:flex; align-items:center; justify-content:space-between; margin:2px 0 6px; font-size:.9rem}
-.actnav .linkbtn:disabled{opacity:.3}
 .pace.comp b{font-weight:800}
 .ranges.small{margin-top:10px}
 .ranges.small button{font-size:.72rem; padding:5px 0}
@@ -2759,18 +2757,10 @@ $("aSave").addEventListener("click", () => {
 function renderAct(){
   const tk = ymd(Date.now()), a = readAct(), box = $("actBox"); box.textContent = "";
   if (!actDay || actDay > tk) actDay = tk;
-  const day = actDay, v = a[day], isToday = day === tk;
-  // ‹ 前の日 ／ 次の日 ›
-  const shift = n => { const d = new Date(dms(day)); d.setDate(d.getDate() + n); actDay = ymd(d.getTime()); renderAct(); };
-  const nav = el("div", "actnav");
-  const prev = el("button", "linkbtn", "‹ 前の日"); prev.type = "button"; prev.addEventListener("click", () => shift(-1));
-  const next = el("button", "linkbtn", "次の日 ›"); next.type = "button"; next.disabled = isToday; next.addEventListener("click", () => shift(1));
-  nav.append(prev, el("b", null, dayLabel(day, tk)), next);
-  box.append(nav);
+  const day = actDay, v = a[day];
+  // 見ている日は棒のタップで切り替える。直すときは右上の「＋ 記録」（見ている日で開く）
   const big = el("div", "wnow"); big.append(el("span", "big2 num", v ? fmt(v.kcal) : "—"), el("span", "unit", "kcal"),
-    el("span", "wdelta", v ? (v.src === "apple" ? "Appleフィットネス" : v.src || "") : (isToday ? "今日はまだありません" : "この日の記録はありません")));
-  const edit = el("button", "chip", v ? "この日を直す" : "この日を入れる"); edit.type = "button"; edit.style.marginLeft = "auto";
-  edit.addEventListener("click", openAct); big.append(edit);
+    el("span", "wdelta", v ? `${dayLabel(day, tk)}・${v.src === "apple" ? "Appleフィットネス" : v.src || ""}` : `${dayLabel(day, tk)}はまだありません`));
   box.append(big);
   // 7日分の棒（タップでその日を見る。見ている日が7日より前なら、その日までの7日）
   const wk = el("div", "week mini");

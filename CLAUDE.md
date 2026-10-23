@@ -64,7 +64,7 @@ GitHub Pagesで公開し、iPhoneのホーム画面から単体アプリとし�
 - **運動の分を目安に足す**：`settings.profile.addMode`（none／gym 筋トレの記録／apple Appleの動いた分。旧 `addBurn` は gym 扱い）。足すときは活動係数1.2。
 - **動いた分（Appleフィットネス）**：localStorage `foodlog.activity`（`{日付:{kcal, src}}`）。スプレッドシートの「活動」シート（A日付 B kcal C元）に
   iPhoneのショートカットが `activity_put` で書き込み、アプリは `activity_list` で取り込む（起動時・5分ごと）。手入力も `activity_put`。手順は設定の「Appleフィットネス連携」。
-  からだタブのカードは `actDay`（見ている日）を「‹ 前の日／次の日 ›」と7日の棒のタップで切り替え、「この日を直す」でその日を手で直せる。
+  からだタブのカードは `actDay`（見ている日）を7日の棒のタップで切り替え、右上の「＋ 記録」はその日で開く。
 - **顔・体のAIレビュー**：全画面の各写真に「Sonnet／Haikuでレビュー」。前の同じ種類の写真と今回を送り（`askClaude` の第4引数で中身を渡す）、
   `{summary, good, care, tips, bodyfat, change}` を写真の記録の `review` に保存。医療的な診断・容姿の採点はしない指示。`stop_reason: refusal` は専用の文言。
 - **1日の目安カロリー**：`settings.profile`（性別・生まれた年・身長・活動係数・目標体重・ペース）と最新の体重から
