@@ -420,6 +420,9 @@ main{max-width:640px; margin:0 auto; padding:6px 16px 0}
 .nuttoggle[aria-expanded=true]::after{content:" －"}
 .nuts{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:8px}
 .yenask{text-align:right; margin:2px 8px 0}
+.yenrow{display:flex; justify-content:space-between; align-items:center; margin:10px 8px 0; font-weight:700}
+.yenrow span{display:flex; align-items:center; gap:4px; color:var(--muted)}
+.yenrow input{width:110px; text-align:right; font:inherit; font-weight:800; font-size:1.1rem; color:var(--ink); background:var(--surface2); border:0; border-radius:10px; padding:6px 8px; outline:none}
 .nut{display:flex; flex-direction:column; gap:3px; font-size:.68rem; font-weight:700; color:var(--muted); text-align:center}
 .item .nut input{width:100%; padding:6px 4px; text-align:center}
 .nutsum{margin:4px 8px 0; text-align:right; color:var(--muted); font-size:.82rem; font-weight:600; min-height:1em}
@@ -584,6 +587,7 @@ select{font:inherit; color:var(--ink); background:transparent; border:0; flex:1;
 
     <div class="totalrow"><span style="font-weight:700">合計</span><span><span class="v num" id="mTotal">0</span> kcal</span></div>
     <p class="nutsum num" id="mNuts"></p>
+    <div class="yenrow"><label for="mYenTotal">値段（全部で）</label><span>約 ¥<input type="number" id="mYenTotal" inputmode="numeric" min="0" placeholder="—" aria-label="この食事の値段（円）"></span></div>
     <div class="yenask"><button class="linkbtn" id="mYen" type="button" hidden>値段をAIで見積もる（約0.1円）</button></div>
 
     <button class="btn primary" id="mSave" type="button">記録する</button>
@@ -1573,9 +1577,33 @@ function renderItems(){
 function total(){
   $("mTotal").textContent = fmt(sum(draft.items));
   const y = ysum(draft.items);
-  $("mNuts").textContent = [nutLine(draft.items), y != null ? `値段 約¥${fmt(y)}` : ""].filter(Boolean).join("・");
+  $("mNuts").textContent = nutLine(draft.items);
+  if (document.activeElement !== $("mYenTotal")) $("mYenTotal").value = y ?? "";
   showYenBtn();
 }
+// 値段は全体の金額を入れれば、品目に割り振る（今の値段の比率で。値段がなければカロリーの比率、それもなければ均等）
+let yenSnap = null;
+$("mYenTotal").addEventListener("input", () => {
+  if (!draft) return;
+  const T = yenv($("mYenTotal").value), items = draft.items;
+  if (!yenSnap || yenSnap.length !== items.length) yenSnap = items.map(i => i.yen); // 打ち始めの比率を保つ
+  const snap = yenSnap;
+  const use = items.map((it, i) => (it.name || "").trim() || it.kcal > 0 || snap[i] != null);
+  if (T == null){ items.forEach((it, i) => { it.yen = snap[i] ?? null; withBase(it); }); }
+  else {
+    const by = [snap.map(v => Number(v) || 0), items.map(i => Number(i.kcal) || 0), items.map(() => 1)]
+      .map(w => w.map((v, i) => use[i] ? v : 0)).find(w => w.some(v => v > 0)) || items.map(() => 1);
+    const W = by.reduce((a, b) => a + b, 0);
+    let left = T, big = by.indexOf(Math.max(...by));
+    items.forEach((it, i) => { it.yen = by[i] > 0 ? Math.round(T * by[i] / W) : (use[i] ? 0 : null); left -= it.yen || 0; });
+    items[big].yen = (items[big].yen || 0) + left; // 端数は一番大きい品目に
+    items.forEach(withBase);
+  }
+  document.querySelectorAll("#mItems .nut.yen input").forEach((inp, i) => { if (items[i]) inp.value = items[i].yen ?? ""; });
+  showYenBtn();
+});
+$("mYenTotal").addEventListener("change", () => { yenSnap = null; });
+$("mYenTotal").addEventListener("blur", () => { yenSnap = null; });
 // 値段が入っていない品目があれば「値段をAIで見積もる」を出す
 function showYenBtn(){
   const b = $("mYen"); if (!b) return;
